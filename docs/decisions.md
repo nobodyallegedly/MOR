@@ -106,6 +106,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 **Questions in batches; one at a time is for him** (27 November, 20:40). The MOR lead had passed "one question at a time" on to the windows. He: "Maybe I don’t need to play ping pong one at the time. The one at the time is for the human"
 - *Arrived at (to check):* between the windows and the MOR lead, questions go in one batch, numbered, each with the window's lean, and are answered in one batch. One at a time is kept for questions that are his.
 
+**Publishing the Terms is the publisher's assent** (27 November, 20:49–20:50; Fable 5.1's fifth attack, its question 1.1, the lead's reading 4 in docs/lead/notes/2026-11-27-readings-for-p2.md). The MOR lead asked whether the act that publishes the Terms counts as its signer's assent, the other parties assenting later in acts of their own, leaning yes, since it reads "The person publishing the act is by default an author, the rest adds signature later" one step further. He: "What is number 4?" The MOR lead retold it: Ana publishes the Terms in an act she signs; does that act count as her yes, or must she sign a separate yes like everyone else? He: "Yes, I don’t see the need to have her sign twice"
+- *Arrived at (to check):* the act that publishes the Terms is its signer's assent to them; the signer does not sign again. The other parties assent later, each in an act of their own.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**

@@ -9,7 +9,7 @@
 | 1 | The signers an update "needs" are those the condition's cMIP requires (K2's output); lacking one, by default, the known parties. "Each shown after" means every needed signer's act is shown after every needed assent. | "Known parties"; "In force once pinned" (18 November) |
 | 2 | A first version that every party signs is pinned by their knots, whatever keeper is named. | "A dead keeper: an update every needed signer signs needs no keeper" (18:51) |
 | 3 | With keepers named, knots alone still show lateness; a keeper vouches for the chaining only. | "Knots are knots"; "Two keepers named, both needed" (16:44) |
-| 4 | Fable 1.1: the Terms act is its signer's assent; the other parties assent later, each in an act of their own. **Marked for Nobody, allegedly, to see**, since it reads his words further than he wrote them. | "The signer of a Terms act is an author" and its correction: "The person publishing the act is by default an author, the rest adds signature later" |
+| 4 | Fable 1.1: the Terms act is its signer's assent; the other parties assent later, each in an act of their own. Seen by him (20:50): "Yes, I don’t see the need to have her sign twice"; see the ledger, "Publishing the Terms is the publisher's assent". | "The signer of a Terms act is an author" and its correction: "The person publishing the act is by default an author, the rest adds signature later" |
 | 5 | "In an act of her own" means a Statement in her own name, naming the grantee and the power's sort; K3 reads it. | "A filling gives no power"; the giver bears it ("Ana took the risk") |
 | 6 | A Terms act signed by someone who is not a party is invalid. | "There is no such thing as an unsigned act"; "Known parties" |
 | 7 | A spot a known party fills is a known party's act: 5.10.7 (an unknown party's filling) does not stand for it. | "A filling gives no power", with "that fills an unknown party spot" and "these two are not the same class or IDs" |
@@ -25,4 +25,4 @@ Also for the scribe: an empty keeper list is E18's fault (as the codemeister's a
 
 ## For P2 and P3
 
-P2 writes the companion's scenarios and encoding 3's "One fault, one rule" on these readings, citing this note by path. Draft 26's own words for them are P3's. Number 4 waits on his look; until then P2 writes it as the lead's reading, marked so.
+P2 writes the companion's scenarios and encoding 3's "One fault, one rule" on these readings, citing this note by path. Draft 26's own words for them are P3's. Number 4 is now his, as the ledger records it.
