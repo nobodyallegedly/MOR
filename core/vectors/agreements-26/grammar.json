@@ -1,0 +1,578 @@
+{
+  "about": "The grammar verifier's answers under Agreements draft 26 (docs/agreements-from-scratch/draft-26.md, at b58e417), each case built from complete acts in the bytes of encoding 3, signed by test identities. Each case lists the acts held (label, id, complete bytes in hex, payload), acts named and not held, the stand-in tables of the other layers (each keeper's signed records the verifier holds a copy of, its state; clocks; Money; the envelope's chain), the reader, the question, what each stub cMIP was asked and what it answered, and the expected answer: its word, the grammar rule named, its qualifier, the keepers that counted and those not showing it, who it names, whether disputed. `also` gives further answers to the same question. Every answer is read from draft 26 with the ledger and the lead's notes, quoted in `decides` and named in `reading`, never from code: no grammar verifier of draft 26 exists yet. TEST DATA: every identity, keeper, clock, key, cMIP and record signature is a stand-in derived from a fixed label.",
+  "asks": [
+    {
+      "about": "args: [Terms act]. Whether those Terms are in force: `in force`, or `not shown` with the reason; `fork`; `unchecked`; `invalid` where the act is",
+      "ask": "in_force"
+    },
+    {
+      "about": "args: [root]. Which Terms of the agreement are in force: `in force`, naming the version in `who`; `fork`; `unchecked`",
+      "ask": "last_version"
+    },
+    {
+      "about": "args: [Terms act with `replaces`]. Its gate: `valid` (with the condition, or \"by default\"), `not valid`, `not shown` (an assent lacking), `late`, `fork`, `unchecked`; `also`: whether it is in force",
+      "ask": "update"
+    },
+    {
+      "about": "args: [assent]. `shown` (counted, its Terms in force, or a filling earned), `not shown` with the reason, `unchecked`",
+      "ask": "assent"
+    },
+    {
+      "about": "args: [counter signature]. `shown` (it cancels), `not shown` (late, or follows no assent), `fork`",
+      "ask": "counter_signature"
+    },
+    {
+      "about": "args: [person, act]. Whether that person is bound by that act (5.6.1): `shown`, `not shown`, `unchecked`",
+      "ask": "bound"
+    },
+    {
+      "about": "args: [act]. Whether it is an agreement's signature (5.1.2): `shown`, naming the agreement, or `not shown`",
+      "ask": "signature_of"
+    },
+    {
+      "about": "args: [signer, root]. That signer's line within the agreement: `shown`, `fork`, `unchecked` before an act",
+      "ask": "line"
+    },
+    {
+      "about": "args: [resolving update]. `valid` and `in force` (of Terms), `shown` (a line, or under a power to resolve), `not shown` with the reason",
+      "ask": "resolution"
+    },
+    {
+      "about": "args: [B, A]. Whether B is shown after A (5.13.3, 5.13.4)",
+      "ask": "order"
+    },
+    {
+      "about": "args: [root, version or none]. The receiver for an act (5.1.4): `shown`, naming a party, `not shown`, `unchecked`",
+      "ask": "receiver"
+    },
+    {
+      "about": "args: [payment]. The receiver for that payment (5.1.4)",
+      "ask": "receiver_for_payment"
+    },
+    {
+      "about": "args: [root, position]. Each filling of the spot at that position (5.10.2)",
+      "ask": "fillings"
+    },
+    {
+      "about": "args: [root, position]. Whether the spot still takes new identities: the task's output (5.10.5)",
+      "ask": "takes_new"
+    },
+    {
+      "about": "args: [version, signer]. The version a filling was earned under, and each later version that changes what it earned (5.10.7)",
+      "ask": "rights"
+    },
+    {
+      "about": "args: [version, signer]. Whether what a filling gave still applies: the task's output (K1, 5.10.8)",
+      "ask": "still_applies"
+    },
+    {
+      "about": "args: [Terms]. Whether the Terms hold the Control task (5.11.2)",
+      "ask": "holds_control"
+    },
+    {
+      "about": "args: [report or settlement, reader]. The data task's output (K8, 5.11.5)",
+      "ask": "data"
+    },
+    {
+      "about": "args: [root]. Which agreements of a sequence carry a call (5.11.4)",
+      "ask": "before_paying"
+    },
+    {
+      "about": "args: [contest]. Whom it reaches, and whether it is a buyer's or a baker's (5.11.8, 5.11.9)",
+      "ask": "contest"
+    },
+    {
+      "about": "args: [Terms act]. What the verifier left unread (5.2.3)",
+      "ask": "whole"
+    },
+    {
+      "about": "args: [act]. Whether the act is invalid (§3.6, §4.4)",
+      "ask": "act"
+    },
+    {
+      "about": "args: [act, root]. Whether the act is placed per the keepers the Terms name (§3.4, 5.8.3)",
+      "ask": "placed"
+    }
+  ],
+  "cases": [
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258208619d8f27128c2ce984c4a840c3ee088338e402d1cebda1fbe23c0c9d4376c8f0358202bc603ac414884f4b0775b1fe983ccb039e1cbe1b6c22b8c1803bb3c04b6c0e4045818cd9af2c17723e49bc1987d879342118b532109f5759e26ff055820dbf668cfee6be401c61b809d8adf7170cfc67a78585c6c89839baafa919c1ecb589d64dd95bbdc73694104a71b536c8fa2e2d0293ff23a799c620fd0b51f3686faec10f0bcc60be9149da78d34dc2ff902091f908a84240fffa60cb10bde518868b78e5a21dd10a9662a949422266d10092bd772912f0c895da1715d649007575056c5ae18ad0feff2b546be74e79cb1ea5a265459578a04e206b53d6f05a45d0a469689590ee93fd8feefd31d46b3b57b6f18773de745c80c0c74bc86633c83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958400a9a03f0db41aac8af494d2d1a3caf5c5d9b089553455594910ce695a3adc4b5603ca1bdc421585ba50ffe828e82f0830b78ce83596650902242d9669ac7e844",
+          "id": "9397d70cc52903148bf87d52891cdbd7ec62958a15caaa28cdae587cf45c7bed",
+          "key": null,
+          "label": "first act/root, by A/its words",
+          "payload": "a100782954686520776f726473206f66206669727374206163742f726f6f742c2062792041202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258209383650e1622ac4c25c897b2714e4d7f2dd5876bd39a733835e7d1f9512a89b4035820817c0aa69f9abb12ff1cd1c0da6a52b0aef4bd035a8065ebbef20bba8e7b7c06045818399229bee7cb85e1094ac3d3776026ef31ef97ec22555eac0558205281c5ac8383e0fce80009f985e862814c7489c5c2489d7e4fba21152e9729f059012a24742162e2b693d5630d963206ec3c555395c012b5c34c4fd14f18b2f5b854a061ef20edc76653014dd8b6baa522502a006a4f1d23e6d4a274d90d25d8e60f62bc2d24cfd413860a437cb65f195a8373da66b8df8919b2240038248c8034b0abc7a8c5e483c8834cbf3f227f0e3232f94584dff0849ddee1ec24a446d9ebf134ff21bf37bdaf09ac7200cd098353fb21a5f3ecb24f427bb4c35620128daa97ef43a48de2cc00eefccb35c2144ef5a902a14eb4e29c1410cdb6a24dbbd827cc5d82e6fa9b86c2987e1506693e547c9671490104af540af27f2b4cc5d48d6a7dfe7c3c38ebeb8403d629a0cb5283dc57a00c7c7988ce9220294ca4147db5a29211a05ab70b3fc46abcf799cdaa58ea7512674680cfb140310302440c290485a7073234428797656f09a02583015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840cae9e9c23932b172318ab5ed7555347262a3b56d51facca9a3fbf042b5e07450309bee9cd673359fe32d30afb0c3c8cdc24e77aa03de5fdd85c5d652e1ad34c5",
+          "id": "f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b",
+          "key": null,
+          "label": "first act/root, by A",
+          "payload": "a4028282005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6820058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e35038100048258209397d70cc52903148bf87d52891cdbd7ec62958a15caaa28cdae587cf45c7bed825820c2bd196c5ae44cb666a961d9add7941d70af1bfd9fcd833e242af7896db155b5f61380"
+        },
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f025820c5c674bceb676148551b86cc07ecc282ff331a34a297d7b773f1a6ed5693d840035820d78e12fec5b7a7cff815c5ba50e26414e4056cfa172a908ab5edaaf20928f7c0045818334552c97d8f214d920d748eaeb165e7f2cfa9d64054ac3b055820579207b7011193e3ecc4c0436f8ed5f51be7ab5a88fdce160f98573a4f0fdab558bb2ed1190ab01c886939ce9376b1877507ba1986fd171c294e8d2839342946d6968d78f25127162556cd20752022c5ccf5b65067c9f3351324fe9555532330f65ca9cc294c532b62eb5b08933b00bf4c40134e5c8034238a0d47470cda6ad3119bc1ec2c0d5fc021c759176f33e3dbeab9a18e88f44d5acec298a12933909e95c2572ea86c247b20679dd97b2a074636c7264c64374238dbcb1b82ccf2b6959d014edbc2a23db6a23dc2d7d537adf8668bd0791800b0d571670ec62283015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea584046d4699dda444407530be3a919d87a692487167a46686296002bd3b2532e4454e39893013ed899c06df99ae92d1c0ff43b97aecf1ab3de6e67cc2ca8481e6e58",
+          "id": "c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9",
+          "key": null,
+          "label": "first act/B's assent",
+          "payload": "a4005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02000680"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820a7a4917c574ea4214c47f4cba3e3e8d1185d34f89ac0c1310972eb5754974f6703582099779d4f6b183d8b16564b59cfa106f39df070ac6f88c218be6c37a814bbc02e045818426d7c776cf751319b429e72173936fbc8a250a1874efb3f05582082f21452267ec07bd8e6307e8505a45f6dfb29913cc948d8cb3177331b3b7c42590146c42464d0bebed1adc5b39942391d464bb618d2d2647a7feed2de47ca67b61f4d1ab07f986c8a1bd0fb701fb30df8d463f85555bf4f9cdb128d60ed801f24392f45133770b743101b0e9ba7ff72cbf4cc9e2e98447ce95469adda92b80a967bc5eb85ec3f2ae3ba6a4446ef8df4090beef2c56a1efb54b3124039028972b44f250e9e4822da2b92e9dc7bb22be8a64fdda282d9273033ce5fbf68141f542a35542eded64d9e523b57f2bc8b863d0003d6553d5853b40235ec16bc748ccf3944c91e891e007f18f2d991318d46a89a756e9c713566068ec2503d451f31481ce1ecffafaa2200b51146eec211d224380fd538cee81029c3373f9ef72c77582d3fe96c8bcc76c4da6a593c9dd0bc8e1401af2ec788697739f5313ece408113b2a4458d7f0c19008ffc9aee3ef65a738172e7867613e9b6b9430ebb3ff367aca1474b23dfe17c09b283015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958404f334e4efa3235fb3db411c0c317d364272b597072b656f150c7462417e603dc56935911415cb31cd95854e9e42c4c85d233bc7e9c837859aeb829d17fb1a3ba",
+          "id": "d24e085ad7dd9e4f0f6abb5e3c22ca65127a18de2b873aeb32481c87ac73e9fc",
+          "key": null,
+          "label": "first act/A's next act, naming B's assent",
+          "payload": "a5005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02825820a742a3b53ac2cc1f512e74357608e905c98ae061c645ec79f165cd1c2550bd19f606815820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b08815820c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9"
+        },
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f02582057611f32f4900a2a8046da644983a7f7acabbd569a8a092ec7911793bb4eb568035820d1d413d7cdc928c48c149196bb95604c909f933db2ed2141782c59ec5c42cb64045818bf7983d26c978f70dccae8dc236a8dd3e82de20de6b98a7505582001969f7be8477b9e876a08ff5c7e3f4b4d890d5650826f50d79723c0981578e2590122431ae50e724e38ac00d8b5743baa33baf49958e5766848ac9f889972469f5d6474d1cfcadf680955e80373be887861900302cf3dc376e5f1681106b233f9c0e076c66ca495e34c53b4036ac7ca90ccf854cf67d3aca0a7ef7dc869d76ea7569c77d59714f908ec6b9a77a1e89ff451e0c7a53dd10c4105441dd799d0f4d64918f3e3663f916a6aea8407b055c7f079ab2f744dd24fdf867dd9af1264062b28b91847f5c1a8d92196eb71c2e46fd4888c6230d663da1c9e011bc5330872c5ac8f5d5de0a9f481fe9d9a306f9309b59ee8734ca274db563f8d056eddc4292346e2f64cb2a7e3747a18cd49722a7d53d037a6b6e1917f8aa1d720e725ffe314a864437e525b3181142791d19cb14645d9e037cb7f059ab8958e1c7806b235aedd0a979183015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea58404d5ec198ba481e175834e7593a00d932bc349292370f1cc0d68ae170504effd8766c14ffe75f4c6443a4253d4d960d6a47075cfca4ece70795295febff9f33c5",
+          "id": "114e15d00757baf94cce93d96fa50e15334be5f7fe4aaba7e477bb1149dc8c53",
+          "key": null,
+          "label": "first act/B's next act",
+          "payload": "a4005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02825820a742a3b53ac2cc1f512e74357608e905c98ae061c645ec79f165cd1c2550bd19f606815820c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9"
+        }
+      ],
+      "against_sheet": null,
+      "also": [],
+      "answer": {
+        "disputed": false,
+        "keepers_counted": [],
+        "keepers_not_showing": [],
+        "qualifier": "as shown",
+        "reason": "an assent is counted in the name of each party named as a signer: A's, the Terms act itself, and B's; each has made an act in that name within the agreement shown after both: A's next act (its `previous` the Terms act, its `relies_on` B's assent) and B's next act (its `previous` B's assent, which names the Terms act)",
+        "rule": "5.4.1",
+        "who": null,
+        "word": "in force"
+      },
+      "decides": [
+        "draft 26, §4.3, **An author's first act**: \"The act that publishes Terms is its signer's assent to them: it is the assent counted in that signer's name, and the signer does not assent to them again.\"",
+        "draft 26, §4.3, **An author's first act**: \"The first Terms act is its signer's first act within the agreement (§5.7): that signer's next act there, whatever it is, names it in `previous`.\"",
+        "draft 26, 5.4.1: \"Where it carries no `in_force`, it comes into force when there is an assent to it in the name of every party it names as a signer, the Terms act itself being its signer's (§4.3).\"",
+        "draft 26, 5.4.1: \"Where it names none, knots show it: each party in whose name one of those assents is counted has made an act in that same name within the agreement (a Terms act or a Statement of that agreement, and no other knot) that is shown after every one of those assents (§5.13).\""
+      ],
+      "identities": [
+        {
+          "id": "978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6",
+          "label": "identity A (test)"
+        },
+        {
+          "id": "4cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e35",
+          "label": "identity B (test)"
+        }
+      ],
+      "layers": {
+        "clocks": [],
+        "envelope_chain": null,
+        "keepers": [],
+        "money": []
+      },
+      "limits": null,
+      "name": "the Terms act counted as its signer's assent: A publishes the Terms (naming A and B), B assents, A's next act names the Terms act in `previous` and B's assent in `relies_on`, B's next act follows her assent: in force, as shown",
+      "not_held": [],
+      "part": "the author's first act",
+      "question": {
+        "args": [
+          {
+            "id": "f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b",
+            "label": "first act/root, by A"
+          }
+        ],
+        "ask": "in_force"
+      },
+      "reader": {
+        "anchoring": null,
+        "on_behalf_of": null
+      },
+      "reading": [
+        "the ledger, \"Publishing the Terms is the publisher's assent\" (27 November, 20:49–20:50): \"Yes, I don’t see the need to have her sign twice\""
+      ],
+      "sheet_line": null,
+      "status": "new",
+      "stubs_asked": [],
+      "tests": "§4.3, 5.4.1",
+      "verifier_2_case": null
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258208619d8f27128c2ce984c4a840c3ee088338e402d1cebda1fbe23c0c9d4376c8f0358202bc603ac414884f4b0775b1fe983ccb039e1cbe1b6c22b8c1803bb3c04b6c0e4045818cd9af2c17723e49bc1987d879342118b532109f5759e26ff055820dbf668cfee6be401c61b809d8adf7170cfc67a78585c6c89839baafa919c1ecb589d64dd95bbdc73694104a71b536c8fa2e2d0293ff23a799c620fd0b51f3686faec10f0bcc60be9149da78d34dc2ff902091f908a84240fffa60cb10bde518868b78e5a21dd10a9662a949422266d10092bd772912f0c895da1715d649007575056c5ae18ad0feff2b546be74e79cb1ea5a265459578a04e206b53d6f05a45d0a469689590ee93fd8feefd31d46b3b57b6f18773de745c80c0c74bc86633c83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958400a9a03f0db41aac8af494d2d1a3caf5c5d9b089553455594910ce695a3adc4b5603ca1bdc421585ba50ffe828e82f0830b78ce83596650902242d9669ac7e844",
+          "id": "9397d70cc52903148bf87d52891cdbd7ec62958a15caaa28cdae587cf45c7bed",
+          "key": null,
+          "label": "first act/root, by A/its words",
+          "payload": "a100782954686520776f726473206f66206669727374206163742f726f6f742c2062792041202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258209383650e1622ac4c25c897b2714e4d7f2dd5876bd39a733835e7d1f9512a89b4035820817c0aa69f9abb12ff1cd1c0da6a52b0aef4bd035a8065ebbef20bba8e7b7c06045818399229bee7cb85e1094ac3d3776026ef31ef97ec22555eac0558205281c5ac8383e0fce80009f985e862814c7489c5c2489d7e4fba21152e9729f059012a24742162e2b693d5630d963206ec3c555395c012b5c34c4fd14f18b2f5b854a061ef20edc76653014dd8b6baa522502a006a4f1d23e6d4a274d90d25d8e60f62bc2d24cfd413860a437cb65f195a8373da66b8df8919b2240038248c8034b0abc7a8c5e483c8834cbf3f227f0e3232f94584dff0849ddee1ec24a446d9ebf134ff21bf37bdaf09ac7200cd098353fb21a5f3ecb24f427bb4c35620128daa97ef43a48de2cc00eefccb35c2144ef5a902a14eb4e29c1410cdb6a24dbbd827cc5d82e6fa9b86c2987e1506693e547c9671490104af540af27f2b4cc5d48d6a7dfe7c3c38ebeb8403d629a0cb5283dc57a00c7c7988ce9220294ca4147db5a29211a05ab70b3fc46abcf799cdaa58ea7512674680cfb140310302440c290485a7073234428797656f09a02583015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840cae9e9c23932b172318ab5ed7555347262a3b56d51facca9a3fbf042b5e07450309bee9cd673359fe32d30afb0c3c8cdc24e77aa03de5fdd85c5d652e1ad34c5",
+          "id": "f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b",
+          "key": null,
+          "label": "first act/root, by A",
+          "payload": "a4028282005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6820058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e35038100048258209397d70cc52903148bf87d52891cdbd7ec62958a15caaa28cdae587cf45c7bed825820c2bd196c5ae44cb666a961d9add7941d70af1bfd9fcd833e242af7896db155b5f61380"
+        },
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f025820c5c674bceb676148551b86cc07ecc282ff331a34a297d7b773f1a6ed5693d840035820d78e12fec5b7a7cff815c5ba50e26414e4056cfa172a908ab5edaaf20928f7c0045818334552c97d8f214d920d748eaeb165e7f2cfa9d64054ac3b055820579207b7011193e3ecc4c0436f8ed5f51be7ab5a88fdce160f98573a4f0fdab558bb2ed1190ab01c886939ce9376b1877507ba1986fd171c294e8d2839342946d6968d78f25127162556cd20752022c5ccf5b65067c9f3351324fe9555532330f65ca9cc294c532b62eb5b08933b00bf4c40134e5c8034238a0d47470cda6ad3119bc1ec2c0d5fc021c759176f33e3dbeab9a18e88f44d5acec298a12933909e95c2572ea86c247b20679dd97b2a074636c7264c64374238dbcb1b82ccf2b6959d014edbc2a23db6a23dc2d7d537adf8668bd0791800b0d571670ec62283015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea584046d4699dda444407530be3a919d87a692487167a46686296002bd3b2532e4454e39893013ed899c06df99ae92d1c0ff43b97aecf1ab3de6e67cc2ca8481e6e58",
+          "id": "c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9",
+          "key": null,
+          "label": "first act/B's assent",
+          "payload": "a4005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02000680"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820a7a4917c574ea4214c47f4cba3e3e8d1185d34f89ac0c1310972eb5754974f6703582099779d4f6b183d8b16564b59cfa106f39df070ac6f88c218be6c37a814bbc02e045818426d7c776cf751319b429e72173936fbc8a250a1874efb3f05582082f21452267ec07bd8e6307e8505a45f6dfb29913cc948d8cb3177331b3b7c42590146c42464d0bebed1adc5b39942391d464bb618d2d2647a7feed2de47ca67b61f4d1ab07f986c8a1bd0fb701fb30df8d463f85555bf4f9cdb128d60ed801f24392f45133770b743101b0e9ba7ff72cbf4cc9e2e98447ce95469adda92b80a967bc5eb85ec3f2ae3ba6a4446ef8df4090beef2c56a1efb54b3124039028972b44f250e9e4822da2b92e9dc7bb22be8a64fdda282d9273033ce5fbf68141f542a35542eded64d9e523b57f2bc8b863d0003d6553d5853b40235ec16bc748ccf3944c91e891e007f18f2d991318d46a89a756e9c713566068ec2503d451f31481ce1ecffafaa2200b51146eec211d224380fd538cee81029c3373f9ef72c77582d3fe96c8bcc76c4da6a593c9dd0bc8e1401af2ec788697739f5313ece408113b2a4458d7f0c19008ffc9aee3ef65a738172e7867613e9b6b9430ebb3ff367aca1474b23dfe17c09b283015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958404f334e4efa3235fb3db411c0c317d364272b597072b656f150c7462417e603dc56935911415cb31cd95854e9e42c4c85d233bc7e9c837859aeb829d17fb1a3ba",
+          "id": "d24e085ad7dd9e4f0f6abb5e3c22ca65127a18de2b873aeb32481c87ac73e9fc",
+          "key": null,
+          "label": "first act/A's next act, naming B's assent",
+          "payload": "a5005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02825820a742a3b53ac2cc1f512e74357608e905c98ae061c645ec79f165cd1c2550bd19f606815820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b08815820c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9"
+        },
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f02582057611f32f4900a2a8046da644983a7f7acabbd569a8a092ec7911793bb4eb568035820d1d413d7cdc928c48c149196bb95604c909f933db2ed2141782c59ec5c42cb64045818bf7983d26c978f70dccae8dc236a8dd3e82de20de6b98a7505582001969f7be8477b9e876a08ff5c7e3f4b4d890d5650826f50d79723c0981578e2590122431ae50e724e38ac00d8b5743baa33baf49958e5766848ac9f889972469f5d6474d1cfcadf680955e80373be887861900302cf3dc376e5f1681106b233f9c0e076c66ca495e34c53b4036ac7ca90ccf854cf67d3aca0a7ef7dc869d76ea7569c77d59714f908ec6b9a77a1e89ff451e0c7a53dd10c4105441dd799d0f4d64918f3e3663f916a6aea8407b055c7f079ab2f744dd24fdf867dd9af1264062b28b91847f5c1a8d92196eb71c2e46fd4888c6230d663da1c9e011bc5330872c5ac8f5d5de0a9f481fe9d9a306f9309b59ee8734ca274db563f8d056eddc4292346e2f64cb2a7e3747a18cd49722a7d53d037a6b6e1917f8aa1d720e725ffe314a864437e525b3181142791d19cb14645d9e037cb7f059ab8958e1c7806b235aedd0a979183015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea58404d5ec198ba481e175834e7593a00d932bc349292370f1cc0d68ae170504effd8766c14ffe75f4c6443a4253d4d960d6a47075cfca4ece70795295febff9f33c5",
+          "id": "114e15d00757baf94cce93d96fa50e15334be5f7fe4aaba7e477bb1149dc8c53",
+          "key": null,
+          "label": "first act/B's next act",
+          "payload": "a4005820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b015820f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b02825820a742a3b53ac2cc1f512e74357608e905c98ae061c645ec79f165cd1c2550bd19f606815820c242b9c292a0fc5680aec159905996d08ed6911e140b18238e36a10cd2a8cfe9"
+        }
+      ],
+      "against_sheet": null,
+      "also": [],
+      "answer": {
+        "disputed": false,
+        "keepers_counted": [],
+        "keepers_not_showing": [],
+        "qualifier": "as shown",
+        "reason": "the Terms act is the assent counted in A's name, and the Terms are in force",
+        "rule": "5.4.3",
+        "who": {
+          "id": "978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6",
+          "label": "identity A (test)"
+        },
+        "word": "shown"
+      },
+      "decides": [
+        "draft 26, §4.3, **An author's first act**: \"The act that publishes Terms is its signer's assent to them: it is the assent counted in that signer's name, and the signer does not assent to them again.\"",
+        "draft 26, 5.4.3: \"About an assent, a verifier answers **shown** where it is counted in a party's name and those Terms are in force\""
+      ],
+      "identities": [
+        {
+          "id": "978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6",
+          "label": "identity A (test)"
+        },
+        {
+          "id": "4cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e35",
+          "label": "identity B (test)"
+        }
+      ],
+      "layers": {
+        "clocks": [],
+        "envelope_chain": null,
+        "keepers": [],
+        "money": []
+      },
+      "limits": null,
+      "name": "the Terms act counted as its signer's assent: asked about the Terms act as an assent, shown, in A's name",
+      "not_held": [],
+      "part": "the author's first act",
+      "question": {
+        "args": [
+          {
+            "id": "f12818be5eb0b3a45644e5c6a42e9d054ca5864b036b961f517af6c689b61f4b",
+            "label": "first act/root, by A"
+          }
+        ],
+        "ask": "assent"
+      },
+      "reader": {
+        "anchoring": null,
+        "on_behalf_of": null
+      },
+      "reading": [
+        "the ledger, \"Publishing the Terms is the publisher's assent\" (27 November, 20:49–20:50): \"Yes, I don’t see the need to have her sign twice\""
+      ],
+      "sheet_line": null,
+      "status": "new",
+      "stubs_asked": [],
+      "tests": "§4.3, 5.4.3",
+      "verifier_2_case": null
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820bdd685967dddcc8ec0967ee524e2bc4133930a1bf80de2055325b35a1d7788ab0358202cb779a53fdc75bbdf0a8118127c5afc90c6ea773adc909645caad3310afa1b00458188419153851b980797e5a5c68af52f5c8e3996031c0be4d4d0558202af7af468be882e73ad395a2cb04d53de8c76be61d51a92fe814ffbb3afd370c58a1ccdbc2dafc1d2d55d87adf91cee1ec93cdf9d709e49159040103b885359b67e8828384af4cbd208f9b66a62107d57fda0bb7bd79bac5145233eb38719bec2b29375ef1d039fbee0b193ebc2984dd1818ffad1fd1fb11c93a7e1b39601d6c6e0acdd6b7c45ffb0e5d13d4994e58901d774ad35352e8f8aaf0fbd15cc0f0b5f30647382f787844b01166c26212df76bb12d2b79cb5448e3210460806d03484b8150083015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584063cc9c556e77df830e15d41a4c0b325df5b88cd41aa5b557e20ce09022e5acab16bbf039f22b97d94694dfb975e47064aaaf271783e422c5a7b2b838044cd021",
+          "id": "893ace6c6297a3b6989cc5689afdc8c0846abaa50c1314681a6042cc64399d79",
+          "key": null,
+          "label": "three keepers/root, by A/its words",
+          "payload": "a100782d54686520776f726473206f66207468726565206b6565706572732f726f6f742c2062792041202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820ec311407d122c7e66b835b765a0316e68ab97f205e87a8e6c2c2f9f9a069420c03582057544fcbe32e2f226ec0bb623d6a351659c21b6e15dfd686d1221f7886b6a8b204581867390634143861184789cf89bdab0f592bc4a5d7052782860558201c5ad55325a13eb1c530e849d17eb56ee4ded8f56f5ccdb11508e58400af7079590192dab921d120cc7c7d15d08fefc28b5722c0a5ac87ffe225db3466ec19ba2b25b0616fb83434cf70c638ea9af4198d23ebd759fc243b1a6e8b0bc238dfea152d9bfd53046f6a573a9a1814b276aca1ee6b0170e45b92094c26d89f71782e2d858e55880422a7ad5ad0bf1957a077de68c89791afc43393bd4d4a7f4321bfe5218e30a55ab8f2390b50b66a46c33c92b2a7fdcb7ad6b61def9adcd6e391737946ba1f37f5a4a23f8977c2c856a1534614a82363a924b53e6abfc1a1dbe205286b230ec39952a2aacfc4720aea9cf471fba95b7f80537e377aab4f7d296462867f20e26ad4e54f0cf26be7b1d86bb1081a0fb0064670ff16c7049e5a6173ddb2e684628f68f12ea292ba45f6180122a6b167114931e6411ff097246d689f4807bcc7da4517130c6df844575657dc612fccbee66854b0e734b4774a48f1fae361c41745c17ab2dc038c4989da8f9b9908bc0fec3c5ab6032719998765e647e2dad1d305e988ffb471c034acc0cf6b73a62e9102bae5abb000f659fc464f6bd5e36707489b5985920c757e9442aa3f6f7f638a5f8083015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958406d3fee02a3e52082917e5a68500307db3ac3475f052f5430e773f151dd582633305b7243d141e82411532b75f65d2b0ff862aa45e53e205bdc9162c0134b4487",
+          "id": "e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad5",
+          "key": null,
+          "label": "three keepers/root, by A",
+          "payload": "a5028282005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6820058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e3503810004825820893ace6c6297a3b6989cc5689afdc8c0846abaa50c1314681a6042cc64399d79825820c2bd196c5ae44cb666a961d9add7941d70af1bfd9fcd833e242af7896db155b5f60883582009430b569669b8080ae614bc0346c5f18865eb0ca315de89701742f30d7f1e9d582058115e54f993a65b2b856882b351b17fafb38595d32aef196f9ec1e5f1110ff35820b2e1c617e1cd61cd948e2d782ad287569423d1ac20e6bc3836e53f86308680441380"
+        },
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f0258208351fc6a602bc086b96bd55a2613f580be75df880f61532ae56d1c8b7d1f3dc9035820b9471a2d4dadff76876542d2c42f62e707b28da61d3975ad08ba1f30fb4bf73404581838778a18188f7dba33250d7de9b87968b21843ab41e40bbc055820b79b0b512318ce193d945024e1472e1ae636cd3615891dc18632b9f65641cbcb58bbd888a27f556f53458f3c7fa2a65e2bbb5b19d6d65274d4c45bc82581c0f40d2166625e712ac81c0126e54d5fcda230f8cd4a4d870c77dca0fdd5fc1763d235f40ae97fdbd1b369e9e182ce09dff93f78ba2d684c9f26baf39fb41fdc9e26d1afa6e87c76fc5f1f13e5524de70c4487c4715c7be6e48ba3ddb49d3085bed0ab70f4e8ced9e5d912157891e7e7cb8b13b91d72a75834550fe77d76645140531370fd1c85e0ba724dec74fbe6c17784bddf605b8de5ce91fec4ddd03483015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea5840f44314e139b04486abfddbd8f72908c21b3e7ac39188e174bc02fa72971ff0e477ba9508a4657fc159d124806b884aa5a7bdb580f1be56396982e1a19a6b8589",
+          "id": "18db7697174760bebcaa705e43e698da4f73084b62756809fceee3f242ce5acf",
+          "key": null,
+          "label": "three keepers/B's assent",
+          "payload": "a4005820e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad5015820e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad502000680"
+        }
+      ],
+      "against_sheet": null,
+      "also": [],
+      "answer": {
+        "disputed": false,
+        "keepers_counted": [
+          {
+            "keeper": "09430b569669b8080ae614bc0346c5f18865eb0ca315de89701742f30d7f1e9d",
+            "label": "keeper K1 (test)"
+          },
+          {
+            "keeper": "b2e1c617e1cd61cd948e2d782ad287569423d1ac20e6bc3836e53f8630868044",
+            "label": "keeper K2 (test)"
+          }
+        ],
+        "keepers_not_showing": [
+          {
+            "keeper": "58115e54f993a65b2b856882b351b17fafb38595d32aef196f9ec1e5f1110ff3",
+            "label": "keeper K3 (test)"
+          }
+        ],
+        "qualifier": "per keeper",
+        "reason": "every keeper named is needed (K9's socket empty); keeper K3 does not yet show the Terms act or B's assent: a record of K3's is held without them",
+        "rule": "5.8.3",
+        "who": null,
+        "word": "not shown"
+      },
+      "decides": [
+        "draft 26, 5.8.3: \"Where the Terms name several keepers, how many of them must show an act is said by the cMIP the same Terms name beside them (task K9); where that socket is empty, every keeper named is needed.\"",
+        "draft 26, 5.8.3: \"Until then, a verifier answers **not shown**, with that reason, and names the keepers that do not yet show it.\"",
+        "draft 26, 5.4.1: \"Where it names keepers, they show it, as many of them as 5.8.3 asks, at the positions they give those assents, and an act they do not yet show is not yet placed (§3.4).\"",
+        "draft 26, 5.8.4: \"A verifier MUST take those answers from the keepers, qualified **per keeper**, with the keepers that counted named, by K9's answer, and the others named as not showing it.\""
+      ],
+      "identities": [
+        {
+          "id": "978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6",
+          "label": "identity A (test)"
+        },
+        {
+          "id": "4cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e35",
+          "label": "identity B (test)"
+        }
+      ],
+      "layers": {
+        "clocks": [],
+        "envelope_chain": null,
+        "keepers": [
+          {
+            "keeper": "09430b569669b8080ae614bc0346c5f18865eb0ca315de89701742f30d7f1e9d",
+            "label": "keeper K1 (test)",
+            "records_held": [
+              {
+                "places": [
+                  {
+                    "act": "e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad5",
+                    "label": "three keepers/root, by A",
+                    "position": 1
+                  },
+                  {
+                    "act": "18db7697174760bebcaa705e43e698da4f73084b62756809fceee3f242ce5acf",
+                    "label": "three keepers/B's assent",
+                    "position": 2
+                  }
+                ],
+                "signature": "9f5265c734ca509b1f5bc2f2c2cf6b5904d2498bd70b70839b17e62a0aa92398",
+                "signed_by": "09430b569669b8080ae614bc0346c5f18865eb0ca315de89701742f30d7f1e9d"
+              }
+            ],
+            "state": "live"
+          },
+          {
+            "keeper": "b2e1c617e1cd61cd948e2d782ad287569423d1ac20e6bc3836e53f8630868044",
+            "label": "keeper K2 (test)",
+            "records_held": [
+              {
+                "places": [
+                  {
+                    "act": "e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad5",
+                    "label": "three keepers/root, by A",
+                    "position": 1
+                  },
+                  {
+                    "act": "18db7697174760bebcaa705e43e698da4f73084b62756809fceee3f242ce5acf",
+                    "label": "three keepers/B's assent",
+                    "position": 2
+                  }
+                ],
+                "signature": "8c354dbd003f7157c9e98b62752f1cde495044766b8c680cb8ba01fe12407507",
+                "signed_by": "b2e1c617e1cd61cd948e2d782ad287569423d1ac20e6bc3836e53f8630868044"
+              }
+            ],
+            "state": "live"
+          },
+          {
+            "keeper": "58115e54f993a65b2b856882b351b17fafb38595d32aef196f9ec1e5f1110ff3",
+            "label": "keeper K3 (test)",
+            "records_held": [
+              {
+                "places": [],
+                "signature": "a378390ba0b0de6adf38fd746dfa918bde38fa5af8e4e877c53096b2242b16e1",
+                "signed_by": "58115e54f993a65b2b856882b351b17fafb38595d32aef196f9ec1e5f1110ff3"
+              }
+            ],
+            "state": "live"
+          }
+        ],
+        "money": []
+      },
+      "limits": null,
+      "name": "three keepers named, K9's socket empty: two show the Terms act and B's assent, the third's record is held and shows neither: not shown, per keeper, the third named as not showing them",
+      "not_held": [],
+      "part": "the lead's five",
+      "question": {
+        "args": [
+          {
+            "id": "e4d4c6ef5cba12da7c4cc8a0353a40c703ea4efb07555a3fc8df9185c2696ad5",
+            "label": "three keepers/root, by A"
+          }
+        ],
+        "ask": "in_force"
+      },
+      "reader": {
+        "anchoring": null,
+        "on_behalf_of": null
+      },
+      "reading": [
+        "the ledger, \"Keepers: cross verification by default, a socket to lift it\" (27 November, 23:52, to 28 November, 00:00): \"Agreed, and there is a socket to lift it. (Which needs to be in the header)\"",
+        "the lead's readings for P2 (docs/lead/notes/2026-11-27-readings-for-p2.md), \"P7's three\", answer 1: \"Not shown where the verifier holds a record of that keeper's without the act; unchecked where it holds none of that keeper's records for it.\" The lead's reading",
+        "the lead's expected answer, in the prompt of this session: \"K9 empty, three keepers, one silent: not shown\"",
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7",
+        "taken by the codemeister, to check: encoding 3, section 11, item 15"
+      ],
+      "sheet_line": null,
+      "status": "new",
+      "stubs_asked": [],
+      "tests": "5.8.3",
+      "verifier_2_case": null
+    }
+  ],
+  "spec": {
+    "draft_26": "eb8bfb8735a73517f44679d532098bb9779d0e1cc2092a0d3472f5ff223b6fcc",
+    "draft_26_file": "docs/agreements-from-scratch/draft-26.md",
+    "draft_26_is_final": false,
+    "not_this_encoding": {
+      "draft_25": "dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c",
+      "report_block_4": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854"
+    },
+    "set_label": "MOR/act-set",
+    "set_reading": [
+      "taken by the codemeister, to check: encoding 3, section 11, item 1",
+      "taken by the codemeister, to check: encoding 3, section 11, item 2",
+      "taken by the codemeister, to check: encoding 3, section 11, item 3"
+    ],
+    "text": [
+      {
+        "draft": "Text draft 6",
+        "file": "spec/MIR-text-draft-6.md",
+        "spec": "386b80427f227e970946c4fa1b2c6286adc9e2aa8f8f4ebd34427bf030aa6765"
+      },
+      {
+        "draft": "Text draft 7",
+        "file": "spec/MIR-text-draft-7.md",
+        "spec": "c2e3e83e7c6145a3b30f2e8be49b61c4bc8a25ba49f69a9f9e378af321a53179"
+      },
+      {
+        "draft": "Text draft 8",
+        "file": "spec/MIR-text-draft-8.md",
+        "spec": "e03180b4117af068aac8733335ac2dd908d01e731184da0df2020ea522de093a"
+      },
+      {
+        "draft": "Text draft 9",
+        "file": "spec/MIR-text-draft-9.md",
+        "spec": "12de8b8e60aa3b058c48f977759e3a946302a53db3730b90beff3a2fbece8989"
+      },
+      {
+        "draft": "Text draft 10",
+        "file": "spec/MIR-text-draft-10.md",
+        "spec": "20f0289ac20c43163097518db30fbdb544a70e8df62e9abc220543a6dd5d02af"
+      },
+      {
+        "draft": "Text draft 11",
+        "file": "spec/MIR-text-draft-11.md",
+        "spec": "7835d789f6e9cbb3a089620deea1ca73c591617a10a414bc47bb58ed9063b478"
+      }
+    ],
+    "text_reading": "taken by the codemeister, to check: encoding 3, section 11, item 10",
+    "types": {
+      "statement": 1,
+      "terms": 0
+    }
+  },
+  "stubs": [
+    {
+      "cmip": "c2bd196c5ae44cb666a961d9add7941d70af1bfd9fcd833e242af7896db155b5",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: a map; key 0: the positions of the parties given a part; key 1: true or false, whether what a filling gave still applies",
+      "stub": "K1 body: parts, and whether what a filling gave still applies, from its parameters",
+      "task": "K1"
+    },
+    {
+      "cmip": "df7321657bc15c23bc51f10a1f5aa7f3ebd203fe6dfad65a2cd7b016803b26d0",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: a list of who (`[0, signer]` or `[2, root]`): yes where an assent is counted in each of those names; it names those assents as the ones it requires",
+      "stub": "K2 in force: the names its parameters list must each have an assent counted",
+      "task": "K2"
+    },
+    {
+      "cmip": "4ca0086b99096384201e00e98224f92e3818c6a405ca32a0cc217922775b01f8",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: a list of identity hashes: yes for an act whose signer is one of them",
+      "stub": "K3 power: yes for an act signed by one of the signers its parameters list",
+      "task": "K3"
+    },
+    {
+      "cmip": "334888cce7e1e63582850c4bfe3ef0a44da2a499b1a4916780e39e861808e5c9",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: `[0, k]`: valid where assents of k of the original's known parties to the update are among those that count; `[1]`: never valid; `[2]`: always valid",
+      "stub": "K4 update condition: valid when k of the original's known parties sign (k its parameter), never, or always",
+      "task": "K4"
+    },
+    {
+      "cmip": "0105bfedc1eabb48dee6486b90e2b9d358da072048dc308f24d6e2fa0649a714",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: `[fillings, takes_new]`, each filling `[signer, [proof act ids], version]`",
+      "stub": "K5 spot: the fillings its parameters list, and whether the spot takes new identities",
+      "task": "K5"
+    },
+    {
+      "cmip": "17d80c65870e3172cf1035aa1b0db0b8be104b1ed364edcf39dcc4bb978289f6",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: null",
+      "stub": "K6 control: always yes",
+      "task": "K6"
+    },
+    {
+      "cmip": "a742a3b53ac2cc1f512e74357608e905c98ae061c645ec79f165cd1c2550bd19",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: null; its content is not read",
+      "stub": "K7 kind: a note, stating nothing these grammar rules read",
+      "task": "K7"
+    },
+    {
+      "cmip": "d0105e336a72950260fbc7852807ad4c0b2c5a45c78b5ba6a776576216431065",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: a list of who: yes for those readers, no for any other",
+      "stub": "K8 data: yes for the readers its parameters list",
+      "task": "K8"
+    },
+    {
+      "cmip": "d5d76d64c8857717fd4f6f0682329950205d69e64274980e64ca14fd8eae1690",
+      "for": "tests only: answers from its own parameters, as a table",
+      "parameters": "params: `[k]`: yes where k of the keepers named show the act in a record the verifier holds",
+      "stub": "K9 keepers: enough where k of the keepers named show the act (k its parameter)",
+      "task": "K9"
+    }
+  ],
+  "waiting": [],
+  "words": "Answer words are draft 26's (§3.6): shown, not shown, unchecked, invalid; valid, not valid (of a proposed update); in force (of Terms); fork; late. A task's output is passed on as the task's: \"yes (the task's output)\", \"no (the task's output)\". Qualifiers: as shown, per keeper, per clock, per anchoring, none."
+}

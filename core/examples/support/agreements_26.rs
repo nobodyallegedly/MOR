@@ -591,6 +591,7 @@ pub fn write(dir: &Path) {
     write_sets(&dir);
     write_reference(&dir);
     write_retired(&dir);
+    crate::agreements_26_grammar::write(&dir);
 }
 
 const Q_E2: &str = "encoding 3, E2: \"An act under any other spec hash is **not this encoding**.\"";

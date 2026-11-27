@@ -1,0 +1,4 @@
+{
+  "about": "Verifier 2's grammar cases that draft 26 retires, each copied whole from core/vectors/agreements-new/grammar.json (which stays as it is), with the rule that retires it, quoted, and what the retirement rests on. These answers are draft 25's; they are kept as a record, and no verifier of draft 26 is tested against them.",
+  "cases": []
+}
