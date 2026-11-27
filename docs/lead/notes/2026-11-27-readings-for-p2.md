@@ -84,3 +84,11 @@ The mechanical find: draft 26's head points to draft 25 where it lives, `claude/
 2. **Yes to both.** With keepers named, knots do not show an update late (5.5.4(a)); knots still show a keeper whose record contradicts them (5.8.4, 5.5.4(c)): a knot proves after, whoever says otherwise.
 3. **No new field.** A new first act MAY name an earlier agreement; any fingerprint in any field is a knot ("Knots are knots"). Encoding 3 lists which field as an open item for the codemeister; nothing chosen.
 4. **The lead's, resting on "Protect the unknown party" (26 November):** her filling stands as the keeper showed it before it died, bound by her version for as long as its words say, recorded and checkable; nothing reaches it, the new agreement included. P5 lists it for him to check.
+
+## P5's batch of four, 23:22
+
+1. **The cMIP's answer, asked on what the keepers show.** With keepers named, the assents the update condition is given are those the keepers show (22:45, 1); the verifier passes on its answer per keeper (likely not valid), and "not shown" as in force.
+2. **Yes, it replaces; the lead's.** A live keeper that shows an update naming other keepers pins it like any update. The ledger's "dead or alive" (22:39's Arrived at) overreached and is corrected there: only a dead keeper leaves the parties a new agreement to make.
+3. **Yes,** withdrawn with the hatch.
+4. **Yes,** one line in §7 beside encoding 3's item 14.
+
