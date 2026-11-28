@@ -105,3 +105,20 @@ The mechanical find: draft 26's head points to draft 25 where it lives, `claude/
 1. **Yes, as the scribe leans.** Not shown where the verifier holds a record of that keeper's without the act; unchecked where it holds none of that keeper's records for it.
 2. **Yes,** with the pointer "(5.8.3)".
 3. **Yes:** "what a keeper signed stands when it no longer shows the agreement's acts". No word for a keeper's death is needed.
+
+## The codemeister's ten, 28 November, 08:40
+
+*The lead's answers, by its numbers. First: his answer of 08:34 (ledger, "The keeper's ordered record is a service, not the core") changes the ground under every vector that rests on a keeper's positions, "placed", or "per keeper" order. Those wait for the scribe's next pass.*
+
+1. **As the codemeister leans.** E17 stands for a Statement of kind `resolve`; for a Terms resolving update `previous` follows 5.7.1, and E17 is brought to it. For the scribe; V 43 rewritten after.
+2. **As it leans:** no notes for one act handed alone.
+3. **Both, by what is missing.** An update whose own act is not at the keepers is not there for the agreement ("act exists @"; his 22:30): no update, and K4 is not asked. An update that is there, with assents that are not, is asked of K4 on the assents that are there, its answer passed on. This replaces the lead's answer 1 of 23:22 where they differ.
+4. **As written, plus one sentence in 5.12.4.** For the scribe.
+5. **Not shown.**
+6. **Shown,** as the session has it.
+7. **A stand-in table**, labelled so, written again when Development fixes the form.
+8. **Wait** for the MICS's report block.
+9. **A later session**, before stage two's knots step.
+10. **Key 20 as a stand-in**, labelled to move when the MICS gives the header's form ("The header's form is the MICS's", 27 November, 23:40). The lead's reading of his words; nothing to ask him.
+
+Also: rebase `claude/verifier-3` onto main before stage two; a stranger's reading of the grammar answers, from the text alone, as stage two's first session, after the keeper pass lands.
