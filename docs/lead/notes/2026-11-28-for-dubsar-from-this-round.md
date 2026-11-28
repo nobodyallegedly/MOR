@@ -14,6 +14,8 @@ His words (28 November, 10:25): "DubLaw will need to demonstrate how the agreeme
 - **Partners.** Terms that name a buyer as a signer make her a partner, bound as known parties are; warning her is a client's ("A buyer named as a signer is a partner").
 - **Clocks.** An agreement that states a clock is provisional until anchored ("An act that names a clock is anchored to it").
 
+- **Shares and how they move.** Not the core's: what a share is, how it passes, who signs to lower it ("Shares and how they move are the cMIPs'"). For DubLaw, with DubPay where it pays.
+
 ## For the relay and client side
 
 - **Keeper services.** In the core a keeper is a relay: lodge, relay, fetch ("A keeper is a relay"; "The keeper's ordered record is a service, not the core"). A keeper that signs an ordered record, and the cMIP that names how many keepers count (K9: cross verification by default, lifted by a cMIP), are services to build ("Keepers: cross verification by default, a socket to lift it").
