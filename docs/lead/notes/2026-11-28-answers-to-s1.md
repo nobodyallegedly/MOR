@@ -45,3 +45,7 @@ N1 and N2 go to him, one at a time.
 *By the numbers of P8's report, "What needs a choice", 2 to 9. Yes to every lean, the lead's, to check.* 2: a Statement of a K7 kind. 3: yes, once the Terms are in force. 4: his 15:28 wins; B5 holds for assents through a spot only. 5: yes, the core's, beneath the cMIP. 6: as the scribe leans; not shown while a signature is lacking, never not valid. 7: yes, order by knots whether or not keepers are named; a cost listed in 7.3. 8: refused, by his 10:19. 9: the sentence goes.
 
 Also for the next pass: the companion's line quoting §1 as before P8.
+
+## Answers to P9's five, 18:00
+
+*Yes to every lean, the lead's, to check.* 1: out. 2: as written. 3: left until his answer on "for the whole of agreements". 4: "in force" dropped. 5: both stand.
