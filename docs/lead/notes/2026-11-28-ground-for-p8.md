@@ -47,4 +47,6 @@
 | 22 | No: the keeper provides the agreement's acts; the words are a Text act fetched where Text acts are, named by id in the Terms, so a swap is caught. |
 | 23 | Yes, P8 writes the lead's three of 00:20 where they still stand on this ground. |
 
+Added at 09:05, his 09:02 ("Rely when a relay dies: a proof, not one for the bytes"): where the bytes cannot confirm that an act was at the stated where, the answer stays **unchecked**, and every signed act that bears on it is shown beside it as evidence.
+
 Open, for him, not asked: whether draft 26's "valid" widens to his "safe to run" (08:49); the text keeps its word until he says.
