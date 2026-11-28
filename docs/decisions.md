@@ -191,6 +191,8 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 
 **An act that names a clock is anchored to it** (28 November, 10:19; the no-versions test's fourth real cost: knots cannot show that an act came before a clock ending; the MOR lead leaned that only an act its signer anchored to the clock shows it, and without one it is not shown as before the end). He: "An act cannot name a clock without itself being anchored to it."
 - *Arrived at (to check):* an act that names a clock (Terms that end by it, a filling's term counted by it, any condition in time) is itself anchored to that clock; one that names a clock and is not anchored to it is refused, as "A condition in time with no stated anchor is refused" (26 November) has it. An act's place against a time is shown only by its own anchoring; an act not anchored is not shown as before or after a clock ending.
+- Then (10:20), he: "So an agreement that states a clock is provisional until anchored."
+- *Arrived at (to check):* an agreement that states a clock is provisional until its anchoring is shown: it does not come into force, and nothing counts under it, before then; once anchored, it is read from its anchor. The "refused" above is withdrawn for an act whose anchoring has not yet been shown: it waits. The MOR lead's reading, to check: refused stays only for a condition in time that names no clock to be anchored to (26 November); the answer while it waits is **not shown** as in force, with the reason "not yet anchored".
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
