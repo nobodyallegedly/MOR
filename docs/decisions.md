@@ -210,6 +210,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 **"Not to be used bare", bigger in the prompts** (28 November, 14:06). He: "It feels like the “not to be used bare” label needs to be bigger" The MOR lead offered it bigger in the words (the MIR's first line) and in the bytes (every answer on an empty socket labelled "by default"), leaning both. He: "In the prompts"
 - *Arrived at (to check):* every prompt that touches Agreements carries his warning right after the wish, quoted, before any task: "This version of agreements is not to be used bare. Big warning needs to be placed on it." with "If agreements it’s always a cMIP". The MOR lead's two other ways (the MIR's first line, the "by default" label in answers) are not decided.
 
+**The old collective and new commitments: cMIP business** (28 November, 15:28–15:30; S2's N1, pull request 373: the MOR lead's sentence of his answer 24 to S1, that the old agreement takes no new commitments, its standing obligations delivered under its last rules until each is). He: "It can, but it needs the approval of the signatures the commitment is with. Again, cMIP business"
+- *Arrived at (to check):* the core writes no bar on the old agreement taking new commitments while it runs on: it may, with the signatures of those the commitment is with, as any agreement does. How it does so, and under what rules, is the cMIPs'. The MOR lead's "takes no new commitments" is withdrawn as a core rule; what stays is that its standing obligations are delivered under it until each is.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
