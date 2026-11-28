@@ -1,8 +1,38 @@
-# Agreements, draft 26: the report, after P8, on the model of 28 November
+# Agreements, draft 26: the report, after P9, on the model of 28 November
 
 *The scribe's session P8, 28 November 2026, to the MOR lead and Nobody, allegedly; rewritten whole in N1's shape. A record of work, not a decision: nothing in it is chosen. Marks: TRACED (to a rule or a ledger entry), COUNTED (by the scribe's check script, outside the repository), INFERRED (the scribe's reading). Draft 26 is not merged and not LATEST; draft 25, encoding 2 and `spec/README.md` are untouched. The report as P7 left it is kept below, under "Before P8".*
 
 **The wish** (Nobody, allegedly, 26 November, 16:46): "We need to change the current wish to updating the core after the findings". **His warning** (28 November, 14:06): "This version of agreements is not to be used bare. Big warning needs to be placed on it." "If agreements it’s always a cMIP"
+
+## What P9 changed
+
+*The scribe's session P9, 28 November 2026, after P8, on the same branch. A record of work, not a decision. Each edit is marked with its source: **his** (his words, read whole in `docs/decisions.md` on main) or **the lead's** (the MOR lead's line or answer, to check). The words written are the scribe's, to check.*
+
+**In plain words.** Nobody, allegedly, said at 17:45 what "valid" means in Agreements: the core checked the act according to the rules of the cMIPs the agreement names. So a valid answer now always says which cMIPs it was checked under. Where no ending condition is named, it names the default instead. Without the cMIP, the answer stays unchecked. P9 wrote that word in, then the MOR lead's eight answers to P8's questions, then checked everything and computed the hashes last.
+
+**(a) Valid** (his 17:45; the lead's line of 17:43 and 17:45; the words are the scribe's proposal, for him to check):
+- §3.3 **Valid**: moved to §3.6, rewritten: the core checked the act according to the rules of the cMIPs the agreement names, with the grammar's guarantees beneath; a valid answer names those cMIPs; one check, not two verdicts; **not valid** is the same check failing; without the cMIP, **unchecked**; in this text said of an ending: checked under K4's cMIP, named, or under the default of 5.5.2(e), named so, "by default".
+- §3.3 **Ending condition**, §3.6 **Answers** and **Invalid**: their pointers to **Valid** moved.
+- 5.5.2: the opening (the one check the core makes under that cMIP's rules, which the answer names); (c) "the condition's cMIP as what it was checked under" in place of "the condition beside that answer"; (e) the default named as what it was checked under, for **valid** and for **not shown**.
+- 5.5.4: whether a pointer meets the condition is answered as 5.5.2 says, naming the cMIP or the default.
+
+**(b) The lead's eight** (`docs/lead/notes/2026-11-28-answers-to-s1.md`, "Answers to P8's eight, 17:20"):
+- 2, the lead's: 5.5.2(e): an agreement ended without a new agreement is ended by a Statement of a K7 kind.
+- 3, the lead's: 5.5.4: a pointer counts once its Terms are in force, and not before; 5.5.2(a): "the assents to Terms in force" (the stranger's stop, fixed).
+- 4, the lead's, on his 15:28: 5.5.3: no new assent through a spot counts; a new commitment with known parties counts with their signatures.
+- 5, the lead's: 5.5.3 and 5.10.5: once ended, a spot takes no new identities, whatever its K5 cMIP answers: the core's, beneath the cMIP; 5.10.5's "unchecked" without the cMIP holds but once the agreement is ended.
+- 6, the lead's, as the scribe leaned: 5.5.6: "each known party of every agreement it is a known party of signs an act within the agreement that ends"; while that signature is lacking, **not shown**, never **not valid**.
+- 7, the lead's: no change; 5.4.1 says it; the companion's 7.3 marked checked.
+- 8, the lead's, by his 10:19: 5.8.6 and §4.4 case 8: a condition in time naming another clock than the Terms state is refused.
+- 9, the lead's: 5.4.5: the sentence on counter signatures that each name the other taken out.
+
+**Touched, by count.** (a): 2 numbered rules (5.5.2, 5.5.4) and 4 definitions (§3.3 **Ending condition**, §3.6 **Answers**, **Invalid**, **Valid**, the last moved from §3.3). (b): 7 numbered rules (5.4.5, 5.5.2, 5.5.3, 5.5.4, 5.5.6, 5.8.6, 5.10.5) and §4.4 case 8. In all, 7 numbered rules.
+
+**(c) The companion.** Its head; 3.3's quotation of 5.5.3; 4.3's quotation of 5.5.2, and "Who am I to decide?" (his 15:35–15:36, the lead's line) told once there, as companion material; 6.17 gains his 17:20 to 17:45, the lead's lines, and the lead's 17:20, B19 marked answered; 7.3's pin by knots marked checked (the lead's 7); §8's head (a pointer counts once its Terms are in force; a valid answer names what it was checked under) and scenarios 8.2, 8.3, 8.4, 8.6 (T2 not pinned: T1 **not shown** as ended until it is), 8.7, 8.10, 8.11, 8.15, 8.17, 8.23, 8.24, 8.28, 8.30, 8.36, 8.39; 9.1 gains a P9 paragraph; "For the MICS": §1's constraint quoted as §1 stands, and the counter-signature line marked out with 5.4.5's sentence.
+
+**(d) Encoding 3.** Head line; E2's hashes; section 9 step 7 and section 11 item 18 quoting §4.4 case 8 and 5.5.2(e) as they stand; section 12 a P9 entry. No byte changes.
+
+**The stranger.** A subagent that had seen neither the ledger nor the prompt read draft-26.md alone. (1) No ending condition named; Ana and Ben sign a pointer, Carla nothing: **not shown** as ended, never not valid, checked under the default, "by default" (5.5.2(e)); T2 in force among Ana and Ben, T1 goes on (5.5.4). (2) A named cMIP Q says yes; all three sign; T2 in force: **valid**, checked under Q, named, as shown (5.5.2(d)); without Q, **unchecked** (5.5.2(g)). It found two faults P9's words made, both fixed (5.5.4 had said "valid or not valid" where 5.5.2(e) says never not valid; 5.5.2(e) named the default only for valid; 5.5.2(a) handed the condition assents to Terms not yet in force). One more is listed below (5).
 
 ## What P8 changed
 
@@ -266,10 +296,23 @@ Standing from 26 and 27 November, carried where the model leaves them: "Protect 
 
 *Each short; none chosen. His first; then the questions for the MOR lead, each with the scribe's lean; then the lead's readings P8 wrote, for him to check.*
 
-**His.**
-1. **B19, "valid"** (08:49, open): does draft 26's "valid" widen to his "safe to run"? Kept as it stands; it now also names what a closing pointer says ("no longer valid", §3.3 **Valid**).
+*P9.* B19 is **answered by his 17:45** ("It ends up being the core checked this according to the cMIP rules for the whole of agreements"); the words P9 wrote for it (section "What P9 changed", (a)) are the scribe's proposal, for him to check. Questions 2 to 9 below are **answered by the MOR lead's 17:20** ("Yes to every lean", the lead's, to check) and written as (b) lists. What P9's writing leaves open follows first; then the list as P8 left it.
 
-**For the MOR lead** (the scribe's leans, in the report-back).
+**His (P9).**
+1. "For the whole of agreements": does "valid" now stand wherever the core checks an act under a cMIP the agreement names (Terms in force by K2, an act under a power by K3, a filling by K5, a resolve, which 5.12.5 says is "neither valid nor not valid"), or for endings only, as draft 26 now uses it? P9 wrote the least: the word defined for the whole (§3.6), used where it was used.
+
+**For the MOR lead (P9)**, each with the scribe's lean.
+1. §3.6 **Valid**: the old sentences "The core's "valid" has the same spelling and another meaning" and "This text never says "valid" of an act" are out, since 17:45 makes valid said of an act. Lean: out.
+2. The default is named "as what it was checked under", not as a cMIP (5.5.2(e), §3.6). Lean: as written.
+3. §3.6's "A task's output" still passes K2, K3, K5 and the rest "as the task's ... and not as an answer of this text" beside the lead's "one check, not two verdicts". Lean: leave until his 1 is answered.
+4. 5.5.6: the lead's 6 drops "in force" from "another agreement that is in force". Lean: the lead's words, since an ended agreement still delivers its standing obligations (5.5.3).
+5. 5.4.3 gives as a reason for **not shown** "the assent was made after its ending" for any assent, beside 5.5.3's "no new assent through a spot counts" (the lead's 4). Lean: both stand: Terms ended are not in force, so a known party's later assent binds no one either, and a new commitment is a new act signed by those it is with.
+6. The stranger: an answer **as shown** must name "how many keepers the answer rests on, and which" (§3.6); with no keeper named, what it names is not said. Lean: "no keeper", mechanical, for the next pass.
+
+**His, as P8 left it.**
+1. **B19, "valid"** (08:49, open): does draft 26's "valid" widen to his "safe to run"? Kept as it stands; it now also names what a closing pointer says ("no longer valid", §3.3 **Valid**). *Answered by his 17:45; P9 wrote it.*
+
+**For the MOR lead, as P8 left it** (the scribe's leans, in the report-back; each *answered by the lead's 17:20*).
 2. Which act ends an agreement with no successor (the no-versions test's question 4, not in the sorted readings): draft 26 writes the least, a Statement of a K7 kind (5.5.2(e)).
 3. Must Terms be in force before their closing pointer counts (5.4.5's "nothing in Terms counts, until those Terms are in force" beside 5.5.4)? The stranger's stop.
 4. "No new assent to its Terms counts" once ended (B5) beside "it MAY take a new commitment with the signatures of those the commitment is with" (his 15:28 to 15:30), both in 5.5.3.
@@ -290,7 +333,8 @@ Standing from 26 and 27 November, carried where the model leaves them: "Protect 
 ## The counts
 
 COUNTED.
-- **Draft 26**: 67 numbered rules; 77 words defined in §3, each once; 9 tasks; 9 open values (§7). 416 lines, 137,916 bytes.
+- **Draft 26** (P9): 67 numbered rules; 77 entries in §3, each word defined once (**Valid** moved from §3.3 to §3.6); 9 tasks; 9 open values (§7). 416 lines, 138,725 bytes. 7 numbered rules touched by P9.
+- *As P8 left it*: 67 numbered rules; 77 words defined in §3, each once; 9 tasks; 9 open values (§7). 416 lines, 137,916 bytes.
 - **References**: every rule and section draft 26 cites exists; every draft 26 rule encoding 3 and the companion cite outside the parts as P7 left them exists.
 - **Quotations of draft 26**: 56 in encoding 3 and 27 in the companion outside the parts as P7 left them, each found in the text.
 - **His words**: every quotation carrying his typing in the parts P8 wrote found word for word in the ledger.
@@ -298,7 +342,22 @@ COUNTED.
 
 ## The check
 
-Run by the scribe's script, outside the repository, on the four files at this commit:
+**P9.** P8's script is outside the repository and was not at hand; the scribe's script of P9, outside the repository, ran the same lines on the four files, and compared every quotation in encoding 3 and the companion against draft 26 as P8 left it and as P9 left it:
+
+- PASS: draft 26: every rule and section it cites exists (67 rules; bad refs: none)
+- PASS: every draft 26 rule cited in the lines P9 added to the four files exists; every draft 26 rule encoding 3 cites exists
+- PASS: each word defined once in §3 (77 entries; repeated: none)
+- PASS: no "update", "version" as a kind of Terms, "replaces" as a rule, "late" or "per keeper" in §3 to §7 but P8's listed lines (found: "no versions: nothing replaces its Terms" in §3.1 **Agreement**, and 5.5.1's "No versions": P8's listed sentences)
+- PASS: only rules in §4 to §7: no MUST, MAY, SHOULD in §0 to §3 (0)
+- PASS: quotations of draft 26 in encoding 3 and the companion: none that matched draft 26 as P8 left it fails against draft 26 as P9 left it (two failed before (c): the companion's 3.3 and 4.3, both brought along)
+- PASS: his words against the ledger, typos included: his 15:35–15:36 ("chose", "I’d"), and the lead's lines and answers P9 quotes, found word for word in the ledger and the lead's note on main
+- PASS: nothing forbidden (no key, signing word, address, port, access detail) in the lines added
+- PASS: no line ends in a space
+- PASS: capitalised words new to these files, for a reading by eye (no personal name or nickname among them): Exactly (his word, quoted)
+- PASS: draft 25, encoding 2, spec/README.md and every file but the four untouched
+- NOTE: the script's quotation pairing also reports the text between two quotations on one line as a quotation; each such line was read by eye, and none is a quotation.
+
+*The check as P8 ran it*, on the four files at P8's commit:
 
 - PASS: draft 26: every rule and section it cites exists (67 rules; bad refs: [])
 - PASS: encoding-3.md: every draft 26 rule it cites (outside the parts as P7 left them) exists (encoding-3.md bad refs: 0)
@@ -323,7 +382,11 @@ The quotations the last line does not find are headings of this report ("What wa
 
 ## The hashes
 
-Of the final `draft-26.md`, computed last, after every other edit of it:
+**P9.** Of the final `draft-26.md` as P9 left it, computed last, after every other edit of it:
+- E2's tagged hash, `SPEC_DRAFT_26`: `76cc16a45813ac1c50ebbf1bfa60c0c14265b39e8cded84fa01454280466557b`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives P8's `a20fcbf1…` on the file as P8 left it).
+- The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `d9b9b2fbfc293dd852bdca03cc944e34f1a9f8d37f2d2e7ff5bf3bb3c0fd044e`.
+
+*As P8 left it* (these name the text before P9). Of the final `draft-26.md`, computed last, after every other edit of it:
 - E2's tagged hash, `SPEC_DRAFT_26`: `a20fcbf17e46391b7793c541d16c6adce6c1c09ab05850fa9925ee3c402cd54c`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives P7's `eb8bfb87…` on the file as P7 left it).
 - The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `b8bde4c97aef922a1d46fac6ef84124c23577fd0502b1b83655ba90b51a1926d`.
 
