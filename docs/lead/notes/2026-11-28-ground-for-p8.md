@@ -66,3 +66,9 @@ The change: since that naming has an effect no other naming has, it is carried i
 Where this section and the sections above differ, this one stands: no versions replace one another; no `replaces`, no gate and pin of a replacement, no lateness, no fork of Terms; an agreement lives until its ending condition is met; any change is that end and a new agreement whose first act may carry the closing pointer; two acts that both end the same agreement are a fork; no succession of a party; answers of absence are given as far as the acts held show, naming how many keepers they rest on.
 
 Order: the freeze test suite's agreement scenarios are written on the model first (the test's question 22), then P8.
+
+## The scribe's six, before S1 and P8, 10:30
+
+*The lead's answers, by its numbers: yes to all six as the scribe leans.* (1) `spec/03-MOR-freeze-test-suite-v38.md`, v37 copied whole, only the steps the model reaches rewritten, not LATEST, `spec/README.md` untouched, its own branch and pull request. (2) v38 cites the ledger headings it rests on; P8 puts draft 26's rule numbers in later, one commit on v38's branch. (3) Only the steps the test's section 2.2 lists, each changed step listed with its source. (4) Where the people's case remains, rewritten as the model's case; where only the mechanism was tested, dropped and listed with the entry that removes it. (5) By the act's own anchoring; a keeper service named as a cMIP where a step needs a keeper's order; "as far as I can see", naming how many keepers, for every answer of absence. (6) P8 rewrites the companion's scenarios.
+
+Also, for both: where a step or scenario needs a cMIP in a socket to run, name it as a stand-in, labelled so; DubLaw's launch set is to fill those places later (`docs/lead/notes/2026-11-28-for-dubsar-from-this-round.md`).
