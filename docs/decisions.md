@@ -166,6 +166,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then (08:58), he: "The known parties are protected by their signatures, or the signature scheme they agreed to."
 - *Arrived at (to check):* the two classes are protected in two ways. An unknown party is protected by the principle: bound by her version, no later version reaching her. A known party is protected by their own signature, or by the scheme of signatures they agreed to (the ending condition, the powers, the keepers' socket): nothing binds them that they, or that scheme, did not sign. Draft 26 says so beside **Two classes**.
 
+**Rely when a relay dies: a proof, not one for the bytes** (28 November, 09:01–09:02). He: "When a relay dies… it’s the reason rely exists, no?" The MOR lead: yes; a rely is the person's own act naming by id what she relied on, kept with a copy, needing no relay; it proves the act and her reliance, not where the act was; for "act exists @" the nearest bytes are other acts naming hers, the seller's own among them. He: "It still a proof, no one for the bytes to check, but a proof nonetheless."
+- *Arrived at (to check):* where the bytes cannot confirm that an act was at the stated where, the verifier's answer stays unchecked, and every signed act that bears on it (her rely, her copies, the other side's acts that name hers) is shown beside it as evidence, for people or a resolver the agreement names to weigh. The core records it and leaves the judgement to people.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
