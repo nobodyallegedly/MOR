@@ -204,6 +204,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then (13:58), he: "It’s easier than that. If agreements it’s always a cMIP"
 - *Arrived at (to check):* in Agreements, what an agreement does is always a cMIP's answer; no agreement step is answered by the core alone ("not to be used bare"). Every agreement step of the suite and every agreement vector names the cMIPs it runs on, stand-ins labelled where none exists yet. The MOR lead's reading, to check: what the core still holds under every cMIP is the grammar and its guarantees (who signed, what names what, a fork, the stated where, an anchoring, the unknown party's protection), which no cMIP may break; the steps test those beneath the cMIPs' answers.
 
+**Dubsar for cMIP frameworks** (28 November, 14:05). He: "remember that Dubsar can be leveraged when exploring cMIP frameworks"
+- *Arrived at (to check):* when the work needs a cMIP framework explored (the suite's stand-ins, DubLaw's launch set, collective structures), the Dubsar Suite's windows are asked, through its lead, rather than the MOR windows inventing them.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
