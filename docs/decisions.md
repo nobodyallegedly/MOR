@@ -189,6 +189,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then (10:17–10:18), he: "Also, let’s assume a large corporation, surely it is structured with more than 2 agreements. So, the face does not need to change often even if employees do." The MOR lead: employees are in agreements the face is a party to, not part of the face; only a change of who it is touches the face; so no succession of a party in the core. He: "So, really it’s “the board of directors has changed, do you wish to proceed with the new board” which is a fair question I think"
 - *Arrived at (to check):* the churn of a large structure lives in the agreements its face is a party to (employment and the like), so its face changes only when who it is changes: its constitution, its board. Then each counterparty is asked whether to proceed with the new one; that is a fair question, and the core asks it by needing their signature. No succession of a party is written in the core.
 
+**An act that names a clock is anchored to it** (28 November, 10:19; the no-versions test's fourth real cost: knots cannot show that an act came before a clock ending; the MOR lead leaned that only an act its signer anchored to the clock shows it, and without one it is not shown as before the end). He: "An act cannot name a clock without itself being anchored to it."
+- *Arrived at (to check):* an act that names a clock (Terms that end by it, a filling's term counted by it, any condition in time) is itself anchored to that clock; one that names a clock and is not anchored to it is refused, as "A condition in time with no stated anchor is refused" (26 November) has it. An act's place against a time is shown only by its own anchoring; an act not anchored is not shown as before or after a clock ending.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
