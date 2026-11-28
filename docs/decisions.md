@@ -221,6 +221,8 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 
 **Valid: the core can verify this** (28 November, 17:20–17:43; P8's B19, pull request 292: does "valid" widen to his "safe to run" of 08:49?). The MOR lead leaned to keep "valid" narrow (the ending condition passes) and let the whole answer say whether it is safe, so a client can say which part failed. He: "Yes, safe is not the right word. It”s more like “core can verify this”"
 - *Arrived at (to check):* "safe to run" is withdrawn as the meaning of "valid". **Valid** means the core can verify it: the act passes the checks the core makes from bytes (signatures, fields, what names what, the stated where, anchoring, the grammar's guarantees). What a cMIP answers (the ending condition's among them) is given as that cMIP's answer, by name, beside it. The MOR lead's reading, to check: draft 26's "valid" as "the ending condition passes" moves to the cMIP's answer; the scribe proposes the words in the next pass.
+- Then (17:45), he: "It ends up being the core checked this according to the cMIP rules for the whole of agreements"
+- *Arrived at (to check):* in Agreements, **valid** means the core checked it according to the rules of the cMIPs the agreement names, with the grammar's guarantees beneath; since in Agreements it is always a cMIP (13:58), a valid answer always names the cMIPs it was checked under. The line above that gives a cMIP's answer "beside" the core's is read so: not two verdicts, one check, made by the core under the named cMIPs' rules.
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
