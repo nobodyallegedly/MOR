@@ -194,6 +194,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then (10:20), he: "So an agreement that states a clock is provisional until anchored."
 - *Arrived at (to check):* an agreement that states a clock is provisional until its anchoring is shown: it does not come into force, and nothing counts under it, before then; once anchored, it is read from its anchor. The "refused" above is withdrawn for an act whose anchoring has not yet been shown: it waits. The MOR lead's reading, to check: refused stays only for a condition in time that names no clock to be anchored to (26 November); the answer while it waits is **not shown** as in force, with the reason "not yet anchored".
 
+**We are, we use, we offer** (28 November, 13:45–13:53; the scribe's S1, freeze test suite v38, pull request 373, its question H1: a collective built as one agreement changes something that is not who it is, a new way to be paid; is every counterparty asked to renew or exit?). The MOR lead leaned yes, as the rules stand; a collective that does not want to ask them keeps such changes in another agreement. He: "Why did they put the way to get paid in that agreement and not in a separate one would be my question. One agreement for “we are” one agreement for “we use” other agreements for “we offer” no?"
+- *Arrived at (to check):* a collective is built in separate agreements: one for "we are", one for "we use", others for "we offer". A change to how it is paid is a change to "we use", and asks nothing of those who deal with "we are". A collective that puts everything in one agreement makes every change a change of who it is, and every counterparty is asked to renew or exit: its choice, not the core's. This is how DubLaw's collective templates are cut (docs/lead/notes/2026-11-28-for-dubsar-from-this-round.md).
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
