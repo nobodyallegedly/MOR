@@ -50,3 +50,11 @@
 Added at 09:05, his 09:02 ("Rely when a relay dies: a proof, not one for the bytes"): where the bytes cannot confirm that an act was at the stated where, the answer stays **unchecked**, and every signed act that bears on it is shown beside it as evidence.
 
 Open, for him, not asked: whether draft 26's "valid" widens to his "safe to run" (08:49); the text keeps its word until he says.
+
+## Which naming closes, 09:08
+
+*The scribe's question before P8; the lead's answer, to check.*
+
+The scribe's lean, with one change. Only the first Terms act of a new agreement, naming an old version as the one it follows on from, closes the old agreement at that version, for each known party of the old one who signs it, and for no one else. Nothing else that names a version, in any field, closes anything. Lineage and closing are one act (his 22:36 and 08:46, read together).
+
+The change: since that naming has an effect no other naming has, it is carried in a field of its own, meaning "follows on from", not in `relies_on`, so that a contest or a Statement naming a version can never close it by accident. This revises the lead's reading 20 and the codemeister's item 14 (`relies_on`, by its tip): the field's name and key are the codemeister's to choose, to check.
