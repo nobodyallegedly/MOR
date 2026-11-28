@@ -1,6 +1,6 @@
 # The freeze test suite, version 38: what changed from version 37
 
-*The scribe, session S1, 28 November 2026. A record of work, not a decision, and not part of the suite: what `spec/03-MOR-freeze-test-suite-v38.md` changes in version 37, step by step, and what it rests on. Version 37 stays LATEST until Nobody, allegedly, says otherwise. Nothing here is his but what the ledger quotes; every reading is the MOR lead's or the scribe's, and is marked so.*
+*The scribe, sessions S1 and S2, 28 November 2026. S2's part is the section "S2: the answers, the 23 steps, the sweep" at the end, and the marks "Answered" on S1's questions. A record of work, not a decision, and not part of the suite: what `spec/03-MOR-freeze-test-suite-v38.md` changes in version 37, step by step, and what it rests on. Version 37 stays LATEST until Nobody, allegedly, says otherwise. Nothing here is his but what the ledger quotes; every reading is the MOR lead's or the scribe's, and is marked so.*
 
 ## In plain words
 
@@ -146,40 +146,40 @@ None in a step v38 rewrote or added (COUNTED). Left, as v37 has them, by place (
 
 One batch, each with the scribe's lean.
 
-1. **The default ending condition.** Where terms name none, is it every known party's signature, so that steps 1.1, 1.7, 2.6 and 6.3 need no stand-in for it? *Lean:* yes, “Who signs an update by default: the known parties” carried to the socket by “The ending condition”; v38 states it in each step's terms meanwhile.
-2. **A pointer that closes nothing.** Is the new agreement it opens in force among its signers, each bound by both, or does it fail with its pointer (1.9b, 3.7b, 3.7w)? *Lean:* in force among its signers, a client warning before signing, as the no-versions test's 3.3.1 reads.
-3. **A holder who is no party** (an investor, a departed holder, a buyer of a share): does a new agreement lowering or moving its share close the old without its signature (1.9d, 1.9e, 1.9h, 3.7i, 3.7q, 3.7x, 3.7bb, 3.9c)? *Lean:* no: its share is protected by its signature as a known party's is, so the closing waits for it; this is also question H2, his.
-4. **`cmip-collective-control` as an ending condition.** May its tiers, areas and layer powers be read as the signatures a closing pointer must bring, until it is rewritten (every step marked *open: the tiers as ending condition*)? *Lean:* yes, as the lead's note for Dubsar has it ("Constitutional cMIPs are written for the end and the hand-over, not for amending"), the cMIP to be rewritten so before freeze.
-5. **A change that is not of who they are.** Where a collective is one agreement, does a new payment cMIP or extension (3.7g, 3.7j) ask every counterparty to renew or exit? *Lean:* yes as the words stand, every new agreement being a new party; the face of several agreements is how a collective spares them; asked of him as H1.
-6. **The collective's identity.** Does its identity, whose genesis declares the founding agreement, carry to the new agreement by a rotation, or is a new agreement a new identity (3.7, 3.7e, 3.7w, 3.9a, 3.9al)? *Lean:* the rotation declares the new agreement and the identity carries on, its counterparties still asked, since the party named in their deals is the agreement; for the Identity pass to write.
-7. **A split by all.** Two successors each pointing to the original, and one fork act meeting its ending condition: one ending, or a fork by A2 (3.9)? *Lean:* one ending: the fork act meets the condition and names both; A2's fork is for two acts nothing orders.
-8. **Debts handed out at a fork** without the creditor (3.9): carried over, against renew or exit? *Lean:* not carried over: the creditor renews with the successor named, or the original runs on owing it.
-9. **Two endings sharing a signer** (3.3): ordered by that signer's own line, or a fork by B3? *Lean:* ordered by the signer's identity chain, as v37's 3.9ab and “Knots are knots: one reading, "shown after"” read; B3 speaks of `previous` inside a new agreement.
-10. **What bars a dissolution** besides an unknown party's open obligation: a work still held, a public debt to a creditor who is neither a party nor a buyer (3.9f, 3.9g, 3.9h)? *Lean:* neither bars it in the core, his words naming unknown parties only; the creditor keeps the debt's own signed record; stated as a cost.
-11. **A refund owed to a buyer** (3.7w, 3.9f): an obligation open toward an unknown party, barring the dissolution? *Lean:* yes: the buyer took part through a spot.
-12. **A publication over an ended owner** (2.7, 3.9aj): whom does its owners' line pay? *Lean:* read under the publication's words; where they say nothing, owed back, as v37 had it.
-13. **A keeper service's ordered record** (3.7o, 3.9r): does it place an act for a collective, or keep an act against a revocation, where the agreement names the service in its keepers' socket? *Lean:* yes, as that service's answer, labelled so; never where the agreement does not name it.
-14. **"Act exists @" for a debt drawn for a collective** that names a keeper (3.9i). *Lean:* no: a debt is a Money act, not an act of the agreement; the keeper's where is for the agreement's own acts.
-15. **One party's place ending alone** (1.9i, 7.7d). *Lean:* no such ending in the core: a party's leaving is the end and a new agreement without it.
-16. **A settling act for a fork of two endings** (1.7a): its form, and its finality. *Lean:* any act the agreement's own rule accepts, or its resolver's, naming both, and final against a later act that names it.
-17. **A pointer completed late** after another pointer closed the same agreement (3.7o). *Lean:* it closes nothing: an agreement ends once.
-18. **A purchase under a forked ownership agreement** (1.7a). *Lean:* a purchase under the publication, the owners' line divided by the stake of the agreement the fork left standing.
-19. **Steps the model reaches that section 2.2 does not list**, left as v37 has them: 1.5b, 1.9, 1.9c, 1.9f, 1.9g, 3.1, 3.4, 3.7h, 3.7p, 3.7v, 3.7ae, 3.7af, 3.7ah, 3.7ao, 3.7ap, 3.7aq, 3.7ar, 3.7az, 3.9o, 3.9v, 3.9x, 3.9z, 7.8. *Lean:* a second pass writes them on the model on this branch, before P8.
-20. **The Agreements boxes of Core components** still describe keeper records, clone drafts and termination. *Lean:* rewrite them in P8's commit on this branch, with draft 26's numbers.
-21. **The paragraph "The model in v38's steps"**: does it stay until draft 26 defines its words? *Lean:* yes; the stranger's run below needed it.
-22. **Draft 24's field numbers** (field 7, 19, 33…) stay in rewritten steps. *Lean:* keep them until draft 26 gives its encoding.
-23. **Identity rule 34's keeper case** ("a named keeper recorded it") against a keeper that keeps no order (1.5). *Lean:* for the Identity pass; v38 marks it open.
-24. **An old agreement closed, yet running on** (3.9al, 3.7): the pointer closes the old collective's agreement, while the old collective "runs on while it has standing obligations". Under what, and by whom, does it sign meanwhile? *Lean:* the pointer closes it for every new act but those its standing obligations call for, signed under its last rules; this needs a sentence of the lead's.
-25. **The forms the stranger could not build** (1.9i, 1.10): the notice act, an anchoring and its proof, which field names the clock (v37's time reference, field 6) and the ending condition, the closing pointer's field, and each stand-in's parameters. *Lean:* the codemeister's to propose with draft 26's encoding; v38 runs reasoned until then.
-26. **Powers in a v38 step** (1.10's agent): "a power of sort `assent`" is draft 26's word, not v37's grant. *Lean:* say in the step that the power is draft 26's, given by Eve's giver in an act of his own, and run it once draft 26 numbers it.
-27. **The Core components boxes contradict rewritten steps** (termination by marked clone, line on "Clone drafts"), the stranger's stop (c) on 1.9i. *Lean:* as question 20; until then the head's rule that the rewritten step's headings decide applies.
+1. **The default ending condition.** Where terms name none, is it every known party's signature, so that steps 1.1, 1.7, 2.6 and 6.3 need no stand-in for it? *Lean:* yes, “Who signs an update by default: the known parties” carried to the socket by “The ending condition”; v38 states it in each step's terms meanwhile. **Answered** (the MOR lead's answer 1, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes: every known party's signature; written into 1.1 and the head.
+2. **A pointer that closes nothing.** Is the new agreement it opens in force among its signers, each bound by both, or does it fail with its pointer (1.9b, 3.7b, 3.7w)? *Lean:* in force among its signers, a client warning before signing, as the no-versions test's 3.3.1 reads. **Answered** (the MOR lead's answer 2, `docs/lead/notes/2026-11-28-answers-to-s1.md`): in force among its signers, each bound by both, the old going on, a client warning; written into 1.9b, 3.7b, 3.7w and the head.
+3. **A holder who is no party** (an investor, a departed holder, a buyer of a share): does a new agreement lowering or moving its share close the old without its signature (1.9d, 1.9e, 1.9h, 3.7i, 3.7q, 3.7x, 3.7bb, 3.9c)? *Lean:* no: its share is protected by its signature as a known party's is, so the closing waits for it; this is also question H2, his. **Answered** (the MOR lead's answer 3, `docs/lead/notes/2026-11-28-answers-to-s1.md`): his, by “Shares and how they move are the cMIPs'”: what a share is and who signs to lower it are the cMIPs'; written into 1.9d, 1.9e, 1.9h, 3.7i, 3.7q, 3.7x, 3.7bb, 3.9c.
+4. **`cmip-collective-control` as an ending condition.** May its tiers, areas and layer powers be read as the signatures a closing pointer must bring, until it is rewritten (every step marked *open: the tiers as ending condition*)? *Lean:* yes, as the lead's note for Dubsar has it ("Constitutional cMIPs are written for the end and the hand-over, not for amending"), the cMIP to be rewritten so before freeze. **Answered** (the MOR lead's answer 4, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes, until `cmip-collective-control` is rewritten for the end and the hand-over, before freeze; every *open: the tiers as ending condition* mark replaced, and section 3b's note.
+5. **A change that is not of who they are.** Where a collective is one agreement, does a new payment cMIP or extension (3.7g, 3.7j) ask every counterparty to renew or exit? *Lean:* yes as the words stand, every new agreement being a new party; the face of several agreements is how a collective spares them; asked of him as H1. **Answered** (the MOR lead's answer 5, `docs/lead/notes/2026-11-28-answers-to-s1.md`): his, by “We are, we use, we offer”: the collective's choice; written into 3.1, 3.7g, 3.7j, 3b.7e, and step 3.9am added.
+6. **The collective's identity.** Does its identity, whose genesis declares the founding agreement, carry to the new agreement by a rotation, or is a new agreement a new identity (3.7, 3.7e, 3.7w, 3.9a, 3.9al)? *Lean:* the rotation declares the new agreement and the identity carries on, its counterparties still asked, since the party named in their deals is the agreement; for the Identity pass to write. **Answered** (the MOR lead's answer 6, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as the scribe leant, for the Identity pass; written into 3.7, 3.9a, 3.9al, 3b.7e; left open for 3.7w and 3.7ae (a rotation declaring an agreement that closed nothing, or none declaring one that closed).
+7. **A split by all.** Two successors each pointing to the original, and one fork act meeting its ending condition: one ending, or a fork by A2 (3.9)? *Lean:* one ending: the fork act meets the condition and names both; A2's fork is for two acts nothing orders. **Answered** (the MOR lead's answer 7, `docs/lead/notes/2026-11-28-answers-to-s1.md`): one ending where one act meets the condition and both successors are ordered after it by knots; otherwise a fork; written into 3.9, its application to successors founded first left open (question 3 below).
+8. **Debts handed out at a fork** without the creditor (3.9): carried over, against renew or exit? *Lean:* not carried over: the creditor renews with the successor named, or the original runs on owing it. **Answered** (the MOR lead's answer 8, `docs/lead/notes/2026-11-28-answers-to-s1.md`): not carried over; written into 3.9 and 3.9g.
+9. **Two endings sharing a signer** (3.3): ordered by that signer's own line, or a fork by B3? *Lean:* ordered by the signer's identity chain, as v37's 3.9ab and “Knots are knots: one reading, "shown after"” read; B3 speaks of `previous` inside a new agreement. **Answered** (the MOR lead's answer 9, `docs/lead/notes/2026-11-28-answers-to-s1.md`): ordered where the signer's own line orders them; otherwise a fork; written into 3.3.
+10. **What bars a dissolution** besides an unknown party's open obligation: a work still held, a public debt to a creditor who is neither a party nor a buyer (3.9f, 3.9g, 3.9h)? *Lean:* neither bars it in the core, his words naming unknown parties only; the creditor keeps the debt's own signed record; stated as a cost. **Answered** (the MOR lead's answer 10, `docs/lead/notes/2026-11-28-answers-to-s1.md`): neither bars it in the core, a stated cost, listed for him; written into 3.9f, 3.9g, 3.9h.
+11. **A refund owed to a buyer** (3.7w, 3.9f): an obligation open toward an unknown party, barring the dissolution? *Lean:* yes: the buyer took part through a spot. **Answered** (the MOR lead's answer 11, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes; written into 3.7w and 3.9f.
+12. **A publication over an ended owner** (2.7, 3.9aj): whom does its owners' line pay? *Lean:* read under the publication's words; where they say nothing, owed back, as v37 had it. **Answered** (the MOR lead's answer 12, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as the scribe leant; written into 2.7 and 3.9aj.
+13. **A keeper service's ordered record** (3.7o, 3.9r): does it place an act for a collective, or keep an act against a revocation, where the agreement names the service in its keepers' socket? *Lean:* yes, as that service's answer, labelled so; never where the agreement does not name it. **Answered** (the MOR lead's answer 13, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes, as that service's answer, only where the agreement names it; written into 1.5, 1.5b, 3.4, 3.7o, 3.9r.
+14. **"Act exists @" for a debt drawn for a collective** that names a keeper (3.9i). *Lean:* no: a debt is a Money act, not an act of the agreement; the keeper's where is for the agreement's own acts. **Answered** (the MOR lead's answer 14, `docs/lead/notes/2026-11-28-answers-to-s1.md`): no; written into 3.9i.
+15. **One party's place ending alone** (1.9i, 7.7d). *Lean:* no such ending in the core: a party's leaving is the end and a new agreement without it. **Answered** (the MOR lead's answer 15, `docs/lead/notes/2026-11-28-answers-to-s1.md`): no such ending in the core; written into 1.9i and 7.7d.
+16. **A settling act for a fork of two endings** (1.7a): its form, and its finality. *Lean:* any act the agreement's own rule accepts, or its resolver's, naming both, and final against a later act that names it. **Answered** (the MOR lead's answer 16, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as the scribe leant; written into 1.7a.
+17. **A pointer completed late** after another pointer closed the same agreement (3.7o). *Lean:* it closes nothing: an agreement ends once. **Answered** (the MOR lead's answer 17, `docs/lead/notes/2026-11-28-answers-to-s1.md`): closes nothing where knots order it after; otherwise a fork; written into 3.7o.
+18. **A purchase under a forked ownership agreement** (1.7a). *Lean:* a purchase under the publication, the owners' line divided by the stake of the agreement the fork left standing. **Answered** (the MOR lead's answer 18, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as the scribe leant; written into 1.7a, the division the split cMIP's answer.
+19. **Steps the model reaches that section 2.2 does not list**, left as v37 has them: 1.5b, 1.9, 1.9c, 1.9f, 1.9g, 3.1, 3.4, 3.7h, 3.7p, 3.7v, 3.7ae, 3.7af, 3.7ah, 3.7ao, 3.7ap, 3.7aq, 3.7ar, 3.7az, 3.9o, 3.9v, 3.9x, 3.9z, 7.8. *Lean:* a second pass writes them on the model on this branch, before P8. **Answered** (the MOR lead's answer 19, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes: this pass, S2.
+20. **The Agreements boxes of Core components** still describe keeper records, clone drafts and termination. *Lean:* rewrite them in P8's commit on this branch, with draft 26's numbers. **Answered** (the MOR lead's answer 20, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes, in P8's commit on this branch; left.
+21. **The paragraph "The model in v38's steps"**: does it stay until draft 26 defines its words? *Lean:* yes; the stranger's run below needed it. **Answered** (the MOR lead's answer 21, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes; kept, and two bullets added.
+22. **Draft 24's field numbers** (field 7, 19, 33…) stay in rewritten steps. *Lean:* keep them until draft 26 gives its encoding. **Answered** (the MOR lead's answer 22, `docs/lead/notes/2026-11-28-answers-to-s1.md`): yes; kept.
+23. **Identity rule 34's keeper case** ("a named keeper recorded it") against a keeper that keeps no order (1.5). *Lean:* for the Identity pass; v38 marks it open. **Answered** (the MOR lead's answer 23, `docs/lead/notes/2026-11-28-answers-to-s1.md`): for the Identity pass; 1.5 and 1.5b keep *open*.
+24. **An old agreement closed, yet running on** (3.9al, 3.7): the pointer closes the old collective's agreement, while the old collective "runs on while it has standing obligations". Under what, and by whom, does it sign meanwhile? *Lean:* the pointer closes it for every new act but those its standing obligations call for, signed under its last rules; this needs a sentence of the lead's. **Answered** (the MOR lead's answer 24, `docs/lead/notes/2026-11-28-answers-to-s1.md`): the lead's sentence, to check, listed for him; written into the head, 3.7, 3.7az, 3.9 and 3.9al.
+25. **The forms the stranger could not build** (1.9i, 1.10): the notice act, an anchoring and its proof, which field names the clock (v37's time reference, field 6) and the ending condition, the closing pointer's field, and each stand-in's parameters. *Lean:* the codemeister's to propose with draft 26's encoding; v38 runs reasoned until then. **Answered** (the MOR lead's answer 25, `docs/lead/notes/2026-11-28-answers-to-s1.md`): the codemeister's, with draft 26's encoding; v38 runs reasoned until then.
+26. **Powers in a v38 step** (1.10's agent): "a power of sort `assent`" is draft 26's word, not v37's grant. *Lean:* say in the step that the power is draft 26's, given by Eve's giver in an act of his own, and run it once draft 26 numbers it. **Answered** (the MOR lead's answer 26, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as the scribe leant; 1.10 left as S1 wrote it.
+27. **The Core components boxes contradict rewritten steps** (termination by marked clone, line on "Clone drafts"), the stranger's stop (c) on 1.9i. *Lean:* as question 20; until then the head's rule that the rewritten step's headings decide applies. **Answered** (the MOR lead's answer 27, `docs/lead/notes/2026-11-28-answers-to-s1.md`): as 20.
 
 ## Questions for Nobody, allegedly
 
 His, one at a time.
 
-- **H1 (his).** When a collective changes something that is not who it is (a new way to be paid, a new tool), and it is built as one agreement, should each of its counterparties still be asked to renew or exit? *The scribe's lean:* as the words stand, yes, since the new agreement is a new party; a collective that does not want to ask them keeps such changes in an agreement other than the one it shows the world.
-- **H2 (his), after H1.** An investor bought a share of a film but signed none of the film's agreements. When the owners make a new agreement that lowers the investor's share, should that wait for the investor's signature, as it would for one of the owners? *The scribe's lean:* yes.
+- **H1 (his).** When a collective changes something that is not who it is (a new way to be paid, a new tool), and it is built as one agreement, should each of its counterparties still be asked to renew or exit? *The scribe's lean:* as the words stand, yes, since the new agreement is a new party; a collective that does not want to ask them keeps such changes in an agreement other than the one it shows the world. **Answered** (his, “We are, we use, we offer”, 13:45–13:53): His words, quoted: “Why did they put the way to get paid in that agreement and not in a separate one would be my question. One agreement for “we are” one agreement for “we use” other agreements for “we offer” no?”
+- **H2 (his), after H1.** An investor bought a share of a film but signed none of the film's agreements. When the owners make a new agreement that lowers the investor's share, should that wait for the investor's signature, as it would for one of the owners? *The scribe's lean:* yes. **Answered** (his, “Shares and how they move are the cMIPs'”, 13:53–13:58): His words, quoted: “Here again, we”re talking shares and how they move. Nothing in the core answers this. It’s all in the cMIPs”; and, at 13:58: “It’s easier than that. If agreements it’s always a cMIP”
 
 ## The checks
 
@@ -192,3 +192,344 @@ A subagent that had seen neither the ledger nor the scribe's prompt was given v3
 Fixed, needing no choice: an agreement's "first act" and a pointer's "signatures" defined in "The model in v38's steps"; in 1.9i, the deal "ended, dissolved where no new agreement follows", the new agreement after a clock ending showing lineage and closing nothing more, "not yet met" given as far as the acts at the deal's keepers show, and a pointer leaving a party out closing nothing because the ending condition is a clock; in 1.10, the new agreement's parties named, and the dead keeper's case split (the pointer closes, the old deal's own acts unchecked); scenario 1's pass clause "no pointer closes the film's deal without every party"; in 3.9al, the band founded like the label under `cmip-collective-control`, Cy's leaving by resignation and record, the venue's deal's ending condition and clock, the venue's ending signed by the venue and the old band, "label" replaced by "a name people use", and the old band running on for the buyer's obligation.
 
 Listed, needing a choice: questions 24 to 27 above, and these, already asked: the tiers (4), the identity (6), a holder who is no party under a pointer that closes without them (3), one party's place (15). The stranger's other stops are formats v38 does not give (25): a notice, an anchoring, the clock's field, the pointer's field, the stand-ins' parameters.
+
+## S2: the answers, the 23 steps, the sweep
+
+*The scribe, session S2, 28 November 2026, on S1's branch. A record of work, not a decision. It rests on his entries “We are, we use, we offer” and “Shares and how they move are the cMIPs'” (28 November, 13:45 to 13:58, his words quoted in the ledger, their "Arrived at" lines the MOR lead's, to check), on the MOR lead's answers to S1 (`docs/lead/notes/2026-11-28-answers-to-s1.md`, by number), and on the notes S1 rested on. Nothing here is his but what the ledger quotes.*
+
+### In plain words
+
+S1 rewrote version 38 on the new model of agreements and asked 27 questions of the MOR lead and two of Nobody, allegedly. All are answered. Then he said something simpler that reaches every agreement step: “If agreements it’s always a cMIP”. So S2 did three things. It wrote the answers into the steps that asked them. It wrote the 23 steps S1 had left as version 37 had them. And it swept every agreement step: each now ends with **Runs on**, the cMIPs it runs on (a stand-in where none exists yet), saying which of its answers are those cMIPs', and without them, unchecked; and with **Beneath, it passes if**, the core's guarantees the step still tests whatever the cMIP says: who signed, what names what, a fork, the stated where, an anchoring, the unknown party's protection (the MOR lead's reading, to check). A collective built as one agreement now says that asking every counterparty is its own choice, and a new step, 3.9am, shows a collective cut in three.
+
+### The count
+
+COUNTED, by the scribe's script on v38 and the scribe's record of each edit: v38 now has 219 steps (S1's 218 and step 3.9am). 158 steps name their cMIPs (**Runs on**, **Beneath**); 35 are listed as untouched by any cMIP (below); dropped steps are as S1 left them. 45 steps have an answer written in; the 23 steps of question 19 are rewritten; 31 steps lost an Agreements rule number or a draft 24 heading beyond those 23; one step is added. Eight stand-ins are new, fourteen in all. Eight steps still carry an answer marked *open* (below).
+
+### Outside the steps
+
+- The head's second paragraph names the MOR lead's answers to S1 as a source, cited "the MOR lead's answer 2".
+- "The model in v38's steps" gains three bullets: the default ending condition and a pointer that closes nothing (answers 1 and 2); **The cMIPs, and the core beneath them** (his 13:58, the lead's reading of the guarantees, to check); **A closing pointer while obligations stand** (answer 24, the lead's sentence, to check).
+- Section 3b's second note: the mark *open: the tiers as ending condition* is gone, answer 4 cited instead.
+- Core components, "Stand-ins": eight added; "ending by clock" widened to a fixed point (steps 2.7, 3.9e, 3.9aj); every line's scenarios brought up to date.
+- Every scenario's **Passes if** gains one clause: an agreement's doing is the cMIPs' answer, unchecked without them, the guarantees beneath holding. Scenario 1's and 3's clauses on shares, versions and debts are rewritten to the answers; scenario 3's gains the cut in three and the old collective's standing obligations.
+
+### The answers written in
+
+Each step is listed with the answer's number, or his entry's heading. Steps on shares, splits, payouts, debts handed over and refunds are answered as the cMIP's, the core's part being what the bytes show (13:56).
+
+| Step | Answer |
+|---|---|
+| 1.1 | answer 1 |
+| 1.5 | answer 23 (stays open, for the Identity pass) |
+| 1.7a | answer 18; answer 16 |
+| 1.9b | answer 2 |
+| 1.9d | "Shares and how they move are the cMIPs'" |
+| 1.9e | "Shares and how they move are the cMIPs'" |
+| 1.9h | "Shares and how they move are the cMIPs'" |
+| 1.9i | answer 15 |
+| 2.7 | answer 12; "Shares and how they move are the cMIPs'" |
+| 3.3 | answer 9 |
+| 3.7 | answers 4, 6, 24 |
+| 3.7b | answers 2, 4 |
+| 3.7g | answers 4, 5; "We are, we use, we offer" |
+| 3.7i | answer 4; "Shares and how they move are the cMIPs'" |
+| 3.7j | answers 4, 5; "We are, we use, we offer" |
+| 3.7k | answer 4 |
+| 3.7m | answer 4 |
+| 3.7n | answer 4 |
+| 3.7o | answers 13, 17 |
+| 3.7q | answers 3 ("Shares and how they move are the cMIPs'"), 4 |
+| 3.7s | answer 4 |
+| 3.7w | answers 2, 4, 11; 6 stays open for this case |
+| 3.7x | "Shares and how they move are the cMIPs'" |
+| 3.7au | answer 4 |
+| 3.7ax | answer 4 |
+| 3.7bb | "Shares and how they move are the cMIPs'" |
+| 3.8 | answer 4 |
+| 3.8b | answer 4 |
+| 3.8e | answer 4 |
+| 3.9 | answers 7, 8, 24; the application of 7 to successors founded first left open |
+| 3.9a | answer 6 |
+| 3.9c | "Shares and how they move are the cMIPs'" |
+| 3.9f | answers 10, 11 (the second collective's refund INFERRED) |
+| 3.9g | answers 8, 10 |
+| 3.9h | answer 10 |
+| 3.9i | answer 14 |
+| 3.9r | answer 13 |
+| 3.9aj | answer 12 |
+| 3.9al | answers 4, 6, 24; the identity signing the old band's acts left open |
+| 3b 7c | answer 4 |
+| 3b 7d | answer 4 |
+| 3b 7f | answer 4 |
+| 3b 7l | answer 4 |
+| 3b 7e | answers 4, 6; "We are, we use, we offer" |
+| 7.7d | answer 15 |
+
+### The sweep
+
+One row per step changed in (b), (c) or (d): what was done, its source, the cMIPs it names in **Runs on**, and the guarantees its **Beneath** tests (TRACED to the step's own words; which answer is a cMIP's is INFERRED by the scribe from his 13:58, to check).
+
+| Step | Done | Source | cMIPs named | Guarantees tested |
+|---|---|---|---|---|
+| 1.1 | answer written in, swept | answer 1 | `stand-in: two of three keepers`; `stand-in: abandonment clause`; the deal's ending condition, the default (no cMIP) | who signed, what names what, the stated where |
+| 1.3 | swept |  | `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 1.4 | swept |  | `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed, what names what |
+| 1.5 | answer written in, swept | answer 23 (stays open, for the Identity pass) | `stand-in: ordered keeper record` | who signed, the stated where |
+| 1.5b | rewritten on the model (question 19), swept | question 19; answers 13, 23 | `stand-in: ordered keeper record`; `stand-in: stake and transfer` | who signed, what names what, an anchoring |
+| 1.7 | swept |  | the publication's ending condition, the default (no cMIP); `stand-in: payment by rail`; `stand-in: words of sale` | who signed, what names what, a fork |
+| 1.7a | answer written in, swept | answer 18; answer 16 | `stand-in: fork resolver`; `stand-in: waterfall split` | a fork, who signed, what names what, the unknown party's protection |
+| 1.8 | swept |  | `stand-in: milestone terms`; the arbitrator the terms name | an anchoring, the stated where |
+| 1.9 | rewritten on the model (question 19), swept | question 19 | `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what, an anchoring |
+| 1.9b | answer written in, swept | answer 2 | the deal's ending condition, the default (no cMIP); `stand-in: abandonment clause` | who signed, what names what |
+| 1.9c | rewritten on the model (question 19), swept | question 19 | `stand-in: abandonment clause`; `cmip-collective-control` | who signed, what names what |
+| 1.9d | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what, the unknown party's protection |
+| 1.9e | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what |
+| 1.9f | rewritten on the model (question 19), swept | question 19; answer 1 | `stand-in: stake and transfer`; `stand-in: waterfall split`; `stand-in: vow marketplace` | who signed, what names what |
+| 1.9g | rewritten on the model (question 19), swept | question 19 | `stand-in: waterfall split` | who signed, what names what |
+| 1.9h | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: stake and transfer` | who signed, what names what |
+| 1.9i | answer written in, swept | answer 15 | `stand-in: ending by clock` | an anchoring, who signed, the stated where |
+| 1.10 | swept |  | `stand-in: ending by two of three signatures`; the fourth film's ending condition, every party's (no cMIP); Eve's power of sort `assent`, draft 26's, its rule | who signed, what names what, the stated where, a fork |
+| 2.1 | rule number removed, swept | Agreements rule 14 removed, its sentence kept | `stand-in: waterfall split`; `stand-in: words of sale`; `stand-in: stake and transfer` | who signed, what names what, a fork |
+| 2.1c | rule number removed, swept | Agreements rule 14 removed; the agreement's answer named as the cMIP's | `stand-in: words of sale` | what names what, who signed |
+| 2.2 | swept |  | `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 2.3 | swept |  | `stand-in: waterfall split` | who signed |
+| 2.4 | rule number removed, swept | Agreements rule 12 removed | `stand-in: words of sale`; `stand-in: waterfall split` | who signed, what names what |
+| 2.4d | swept |  | `stand-in: waterfall split` | who signed |
+| 2.4e | swept |  | `stand-in: waterfall split` | who signed, what names what |
+| 2.4f | swept |  | `stand-in: waterfall split`; the relay transport cMIP, type 0 | who signed, what names what |
+| 2.4k | rule number removed, swept | Agreements rules 12 and 16 removed | `stand-in: words of sale`; `stand-in: waterfall split` | who signed, what names what |
+| 2.4l | rule number removed, swept | Agreements rule 13 removed; the draft 24 heading "A contest of a purchase" removed | `stand-in: words of sale`; `stand-in: waterfall split` | who signed |
+| 2.5b | swept |  | `stand-in: waterfall split` | who signed |
+| 2.6 | swept |  | publication A's ending condition, the default (no cMIP); `stand-in: words of sale` | who signed, a fork, the unknown party's protection |
+| 2.7 | answer written in, swept | answer 12; "Shares and how they move are the cMIPs'" | `stand-in: ending by clock`; `stand-in: words of sale` | an anchoring, who signed |
+| 3.1 | rewritten on the model (question 19), swept | question 19; answer 4; "We are, we use, we offer"; Agreements rules 98 and 99 removed | `cmip-collective-control`; `stand-in: abandonment clause`; `stand-in: payment by rail` | who signed, what names what |
+| 3.1a | rule number removed, swept | Agreements rule 58 removed | `cmip-collective-control` | who signed, what names what |
+| 3.1b | swept |  | `cmip-collective-control` | what names what |
+| 3.1c | rule number removed, swept | Agreements rule 60 removed | `cmip-collective-control` | who signed |
+| 3.1e | swept |  | `cmip-collective-control` | what names what |
+| 3.1f | rule number removed, swept | Agreements rules 57 and 60 removed | `cmip-collective-control` | who signed, what names what |
+| 3.2 | rule number removed, swept | Agreements rule 98 removed | `cmip-collective-control` | who signed, what names what |
+| 3.3 | answer written in, swept | answer 9 | `stand-in: fork resolver`; `cmip-collective-control` | a fork, what names what |
+| 3.4 | rewritten on the model (question 19), swept | question 19; answer 13; Agreements rule 76 removed | `cmip-collective-control`; `stand-in: ordered keeper record` | who signed, what names what, a fork |
+| 3.5 | rule number removed, swept | Agreements rule 76 removed; the keeper's record gone | `cmip-collective-control` | who signed, what names what |
+| 3.6 | rule number removed, swept | Agreements rule 98 removed | `cmip-collective-control`; `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed, what names what |
+| 3.7 | answer written in, swept | answers 4, 6, 24 | `cmip-collective-control`; `stand-in: abandonment clause` | who signed, what names what, the stated where |
+| 3.7ae | rewritten on the model (question 19), swept | question 19; answers 6 and 24 read, the case left open | `cmip-collective-control` | who signed, what names what |
+| 3.7af | rewritten on the model (question 19), swept | question 19 | `cmip-collective-control` | who signed, what names what |
+| 3.7ag | swept |  | `stand-in: abandonment clause`; `stand-in: stake and transfer`; `cmip-collective-control` | who signed, what names what |
+| 3.7ah | rewritten on the model (question 19), swept | question 19 | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7ai | swept |  | `stand-in: waterfall split`; `cmip-collective-control` | what names what, who signed |
+| 3.7al | swept |  | the grant's limits cMIP, its expiry; the time reference cMIP (task 10) | an anchoring, who signed |
+| 3.7am | swept |  | `cmip-collective-control` | who signed |
+| 3.7an | swept |  | `cmip-collective-control`; `stand-in: abandonment clause`; `stand-in: stake and transfer` | what names what |
+| 3.7ao | rewritten on the model (question 19), swept | question 19; Agreements rule 98 removed; the rollback goes with step 3.7w | `cmip-collective-control` | who signed, a fork |
+| 3.7ap | rewritten on the model (question 19), swept | question 19; Agreements rule 98 removed | `stand-in: words of sale`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7aq | rewritten on the model (question 19), swept | question 19; Agreements rule 99 removed | a control model the collective names | who signed, what names what |
+| 3.7ar | rewritten on the model (question 19), swept | question 19; Agreements rule 98 removed | a control model the collective names | who signed, what names what |
+| 3.7as | swept |  | `cmip-collective-control`; `stand-in: stake and transfer` | who signed |
+| 3.7at | rule number removed, swept | Agreements rule 48 removed | `stand-in: stake and transfer`; `cmip-collective-control` | who signed, what names what |
+| 3.7au | answer written in, swept | answer 4 | `cmip-collective-control` | who signed |
+| 3.7aw | rule number removed, swept | Agreements rule 99 removed | `cmip-collective-control` | what names what, who signed |
+| 3.7ax | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: payment by rail` | who signed |
+| 3.7ay | rule number removed, swept | Agreements rules 65 and 99 removed | a control model answering `[2, counted]` for Money acts; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7az | rewritten on the model (question 19), swept | question 19; answer 24; Agreements rule 74 removed | `cmip-collective-control`; the new control model | what names what, a fork |
+| 3.7b | answer written in, swept | answers 2, 4 | `cmip-collective-control` | who signed |
+| 3.7ba | rule number removed, swept | Agreements rules 74 and 99 removed | step 3.7ay's control model; `stand-in: stake and transfer` | who signed |
+| 3.7bb | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7bc | swept |  | `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7g | answer written in, the cut in three, swept | answers 4, 5; "We are, we use, we offer" | `cmip-collective-control`; `stand-in: payment by rail` | who signed, what names what, a fork |
+| 3.7h | rewritten on the model (question 19), swept | question 19 | `cmip-collective-control`; `stand-in: abandonment clause` | who signed, what names what |
+| 3.7i | answer written in, swept | answer 4; "Shares and how they move are the cMIPs'" | `cmip-collective-control`; `stand-in: stake and transfer` | who signed |
+| 3.7j | answer written in, the cut in three, swept | answers 4, 5; "We are, we use, we offer" | `cmip-collective-control`; the extensions' specifications, field 10 | who signed, what names what |
+| 3.7k | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: abandonment clause` | who signed, what names what, a fork |
+| 3.7m | answer written in, swept | answer 4 | `cmip-collective-control` | who signed, what names what, the stated where, a fork |
+| 3.7n | answer written in, swept | answer 4 | `cmip-collective-control`; the conversion, split, grant-limits, anchoring and time reference cMIPs its terms name (tasks 7, 8, 12, 11, 10) | what names what, who signed |
+| 3.7o | answer written in, swept | answers 13, 17 | `cmip-collective-control`; `stand-in: ordered keeper record`; `stand-in: fork resolver` | who signed, what names what, a fork, the stated where |
+| 3.7p | rewritten on the model (question 19), swept | question 19; answer 4; Agreements rule 35 removed | `stand-in: milestone terms`; `cmip-collective-control` | what names what, who signed |
+| 3.7q | answer written in, swept | answers 3 ("Shares and how they move are the cMIPs'"), 4 | `cmip-collective-control`; `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed, what names what |
+| 3.7r | swept |  | `cmip-collective-control`; the split agreement's split service and its backup (fields 3 and 11) | what names what, who signed |
+| 3.7s | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: stake and transfer` | who signed |
+| 3.7t | swept |  | `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7u | swept |  | the time reference cMIP (task 10); the arbitrators the chain names | an anchoring, what names what |
+| 3.7v | rewritten on the model (question 19), swept | question 19 | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.7w | answer written in, swept | answers 2, 4, 11; 6 stays open for this case | `cmip-collective-control`; `stand-in: words of sale`; `stand-in: open obligation check` | who signed, what names what, the unknown party's protection |
+| 3.7x | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed |
+| 3.7y | swept |  | `stand-in: stake and transfer`; `stand-in: abandonment clause`; `cmip-collective-control` | who signed, what names what |
+| 3.7z | swept |  | `cmip-collective-control`; `stand-in: abandonment clause` | who signed, what names what |
+| 3.8 | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.8b | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: abandonment clause`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.8c | swept |  | `cmip-collective-control`; `stand-in: stake and transfer`; `stand-in: abandonment clause` | who signed |
+| 3.8e | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: stake and transfer` | what names what, who signed |
+| 3.8f | swept |  | `cmip-collective-control`; `stand-in: abandonment clause` | who signed |
+| 3.9 | answer written in, swept | answers 7, 8, 24; the application of 7 to successors founded first left open | `cmip-collective-control`; `stand-in: stake and transfer`; `stand-in: words of sale`; `stand-in: fork resolver` | who signed, what names what, a fork, the unknown party's protection |
+| 3.9a | answer written in, swept | answer 6 | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.9ab | swept |  | `cmip-collective-control` | a fork, who signed |
+| 3.9ad | rule number removed, swept | Agreements rule 10 removed | `stand-in: stake and transfer`; `stand-in: waterfall split` | a fork, who signed |
+| 3.9ag | swept |  | `cmip-collective-control`; `stand-in: waterfall split` | what names what, who signed |
+| 3.9ah | rule number removed, swept | Agreements rule 98 removed | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.9ai | swept |  | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.9aj | answer written in, swept | answer 12 | `stand-in: words of sale`; `stand-in: ending by clock` | a fork, an anchoring |
+| 3.9ak | rule number removed, swept | Agreements rule 10 removed | `stand-in: stake and transfer` | who signed |
+| 3.9al | answer written in, swept | answers 4, 6, 24; the identity signing the old band's acts left open | `cmip-collective-control`; the venue's deal's ending condition, the venue's and the band's signatures (no cMIP); `stand-in: words of sale`; `stand-in: open obligation check` | who signed, what names what, an anchoring, the unknown party's protection |
+| 3.9am | added, the cut in three, swept | (d): "We are, we use, we offer" | `cmip-collective-control`; `stand-in: payment by rail`; `stand-in: waterfall split`; `stand-in: words of sale` | who signed, what names what, the unknown party's protection |
+| 3.9b | swept |  | the collective's ending condition; `stand-in: waterfall split` | who signed |
+| 3.9c | answer written in, swept | "Shares and how they move are the cMIPs'" | `stand-in: stake and transfer` | who signed, what names what |
+| 3.9d | swept |  | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 3.9e | swept |  | `stand-in: ending by clock` | an anchoring, who signed |
+| 3.9f | answer written in, swept | answers 10, 11 (the second collective's refund INFERRED) | `cmip-collective-control`; `stand-in: open obligation check`; `stand-in: words of sale` | who signed, the unknown party's protection |
+| 3.9g | answer written in, swept | answers 8, 10 | `cmip-collective-control` | what names what, a fork |
+| 3.9h | answer written in, swept | answer 10 | `cmip-collective-control`; `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed, what names what |
+| 3.9i | answer written in, swept | answer 14 | `cmip-collective-control` | who signed, the stated where |
+| 3.9j | rule number removed, swept | Agreements rule 92 removed | `cmip-collective-control` | who signed |
+| 3.9k | swept |  | `cmip-collective-control`; `stand-in: words of sale` | what names what, the unknown party's protection |
+| 3.9l | swept |  | `cmip-collective-control` | who signed |
+| 3.9m | rule number removed, swept | Agreements rule 58 and the draft 24 heading removed | `cmip-collective-control` | what names what, a fork |
+| 3.9n | swept |  | `cmip-collective-control` | what names what |
+| 3.9o | rewritten on the model (question 19), swept | question 19; Agreements rule 12 removed | `stand-in: waterfall split`; `stand-in: payment by rail`; `stand-in: stake and transfer` | who signed, what names what, a fork |
+| 3.9p | rule number removed, swept | Agreements rules 91 and 57 removed | `cmip-collective-control` | who signed |
+| 3.9q | rule number removed, swept | Agreements rule 57 removed | `cmip-collective-control` | who signed |
+| 3.9r | answer written in, swept | answer 13 | `cmip-collective-control`; `stand-in: ordered keeper record` | who signed, what names what, a fork |
+| 3.9s | rule number removed, swept | Agreements rules 73 to 80 removed | the grant's own reach, its limits cMIP where it names one | who signed, a fork |
+| 3.9t | rule number removed, swept | Agreements rules 11, 12, 16 and 30 removed | `stand-in: waterfall split`; `stand-in: words of sale` | who signed, what names what |
+| 3.9u | rule number removed, swept | Agreements rules 16 and 17 removed | `stand-in: waterfall split` | who signed, what names what |
+| 3.9v | rewritten on the model (question 19), swept | question 19; Agreements rules 15, 16 and 67 removed | `stand-in: waterfall split`; `stand-in: stake and transfer`; `cmip-collective-control` | who signed, what names what |
+| 3.9x | rewritten on the model (question 19), swept | question 19; Agreements rules 76 and 79 removed; the keeper's record gone | `cmip-collective-control`; `stand-in: words of sale` | what names what, a fork |
+| 3.9y | rule number removed, swept | Agreements rule 79 and the draft 24 heading removed | `cmip-collective-control` | what names what |
+| 3.9z | rewritten on the model (question 19), swept | question 19; Agreements rule 12 removed | `stand-in: payment by rail`; `stand-in: waterfall split` | what names what, who signed |
+| 3b 7ab | swept |  | `cmip-collective-control` | who signed, what names what |
+| 3b 7ac | swept |  | `cmip-collective-control`; the time reference cMIP (task 10) | who signed, an anchoring, what names what |
+| 3b 7ad | swept |  | `cmip-collective-control` | what names what, a fork |
+| 3b 7aj | swept |  | `cmip-collective-control`; `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 3b 7ak | swept |  | `cmip-collective-control` | who signed, what names what |
+| 3b 7c | answer written in, swept | answer 4 | `cmip-collective-control`; `stand-in: words of sale` | who signed, what names what |
+| 3b 7d | answer written in, swept | answer 4 | `cmip-collective-control` | who signed |
+| 3b 7e | answer written in, the cut in three, swept | answers 4, 6; "We are, we use, we offer" | `cmip-collective-control`; `stand-in: payment by rail` | who signed |
+| 3b 7f | answer written in, swept | answer 4 | `cmip-collective-control` | who signed |
+| 3b 7l | answer written in, swept | answer 4 | `cmip-collective-control` | who signed |
+| 6.1 | swept |  | the proven-delivery checker its access form names (step 8.6); `stand-in: words of sale` | who signed, what names what |
+| 6.2 | rule number removed, swept | the draft 24 heading "Grant (type 9)" removed | the grant's own reach: the company's key deliveries | who signed |
+| 6.3 | swept |  | the publication's ending condition, the company's signature (no cMIP); `stand-in: words of sale`; `stand-in: open obligation check` | who signed, the unknown party's protection |
+| 7.1 | swept |  | `stand-in: play-count split`; the time reference cMIP (field 6) | who signed, what names what |
+| 7.2 | swept |  | `stand-in: words of sale` | who signed, what names what |
+| 7.3 | swept |  | the grant to the key-release service, its reach | who signed |
+| 7.4 | swept |  | `stand-in: play-count split`; the play-count module, its use record | who signed |
+| 7.5 | swept |  | `stand-in: words of sale` | an anchoring |
+| 7.6 | swept |  | `stand-in: words of sale` | the unknown party's protection |
+| 7.7 | swept |  | the publications' ending conditions: every party's, and the owners' side alone (no cMIP); `stand-in: words of sale`; `stand-in: play-count split` | who signed, what names what |
+| 7.7b | swept |  | `stand-in: ending by clock` | an anchoring, who signed |
+| 7.7c | swept |  | `stand-in: ending by clock` | what names what |
+| 7.7d | answer written in, swept | answer 15 | `stand-in: ending by clock`; `stand-in: waterfall split` | an anchoring, who signed |
+| 7.8 | rewritten on the model (question 19), swept | question 19; Agreements rule 15 removed; "the version in force" goes | `stand-in: words of sale`; `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 7.8a | swept |  | `stand-in: waterfall split` | who signed, what names what |
+| 7.8b | rule number removed, swept | Agreements rule 18 removed | `stand-in: waterfall split`; `stand-in: stake and transfer` | who signed, what names what |
+| 7.9 | swept |  | the publication's clock, a block height; `stand-in: words of sale` | an anchoring |
+| 7.10 | swept |  | `stand-in: open obligation check`; `stand-in: words of sale` | the unknown party's protection, who signed, the stated where |
+| 9.1 | rule number removed, swept | Agreements rules 10, 12, 15 and 30 removed | `stand-in: stake and transfer`; `stand-in: waterfall split` | who signed, what names what |
+| 9.2 | swept |  | `cmip-collective-control`; `stand-in: stake and transfer` | who signed, what names what |
+| 9.3 | swept |  | `stand-in: abandonment clause`; `stand-in: stake and transfer`; `cmip-collective-control` | who signed, what names what |
+| 9.4 | swept |  | `cmip-collective-control`; `stand-in: words of sale`; `stand-in: open obligation check` | the unknown party's protection, who signed |
+| 9.6 | swept |  | the publication's ending condition, its parties' (no cMIP); `stand-in: words of sale` | a fork, who signed |
+
+### Untouched by any cMIP
+
+Agreement steps a cMIP cannot change, left as they are, and steps of other layers inside the agreement scenarios (TRACED to each step's words):
+
+| Step | Why |
+|---|---|
+| 1.2 | a bake: Envelopes and Text, no agreement |
+| 1.5c | a flow pointer and a rotation: Money and Identity |
+| 2.1b | a bake's size: Envelopes |
+| 2.4b | Money: a route, receipts, claims, formats or rails |
+| 2.4c | Money: a route, receipts, claims, formats or rails |
+| 2.4g | Money: a route, receipts, claims, formats or rails |
+| 2.4h | Money: a route, receipts, claims, formats or rails |
+| 2.4i | Money: a route, receipts, claims, formats or rails |
+| 2.4j | Money: a route, receipts, claims, formats or rails |
+| 2.5 | an unknown cMIP and a machine profile: Development and clients |
+| 2.5c | a bare bake sold by its own price tag: Money and Identity, no agreement |
+| 2.6b | a refund claimed by the committed key alone: Money |
+| 3.7a | a founding's key grammar: who holds the chain key is the core's and Identity's |
+| 3.7aa | a missing act answers unknown and voids nothing: the core's, as “A missing act stays unchecked: no door around it” |
+| 3.8d | a succession plan's format (key 2): the grammar's, what names what |
+| 3.9w | a complete ending is final against a later one naming it: knots, the core's |
+| 3.9aa | a chain signature: Identity |
+| 3.9ac | a signer's own chain orders the closings: knots, the core's |
+| 3.9ae | finality on chain keys and placed releases: Identity's and the core's |
+| 3.9af | a closing whose history is not held is unknown: the core's, as “A missing act stays unchecked: no door around it” |
+| 5.3 | negotiation messages are talk: no agreement's doing, the core's |
+| 8.1 | specifications: Development |
+| 8.2 | specifications: Development |
+| 8.3 | specifications: Development |
+| 8.4 | specifications: Development |
+| 8.5 | specifications: Development |
+| 8.6 | specifications: Development |
+| 8.7 | specifications: Development |
+| 8.8 | specifications: Development |
+| 8.9 | specifications: Development |
+| 8.10 | specifications: Development |
+| 8.11 | specifications: Development |
+| 8.12 | specifications: Development |
+| 9.5 | a collective's rotation and escape: Identity |
+| 9.7 | a crossing to MOR 2: the MICS and Development |
+
+Scenario 4 (a voting cMIP's), scenario 5's other steps (Identity, Text, Money) and scenario 8 (Development) are other layers, not touched.
+
+### The stand-ins
+
+Fourteen, each listed in Core components, "Stand-ins", as "a stand-in, for DubLaw's launch set to fill", none named like a real cMIP (COUNTED). S1's six kept. New in S2: `stand-in: stake and transfer` (what a share is, how it passes, who signs to lower or move it); `stand-in: waterfall split` (a split plan's division); `stand-in: words of sale` (a payment read under a publication's words); `stand-in: payment by rail` (task 6); `stand-in: abandonment clause` (the authority on absence and its outcomes); `stand-in: milestone terms` (a deadline on the terms' clock); `stand-in: vow marketplace` (how a marketplace sells others' vows); `stand-in: play-count split` (a month's receipts by play counts). They stand for what the lead's note for the Dubsar Suite lead leaves to DubLaw (`docs/lead/notes/2026-11-28-for-dubsar-from-this-round.md`): shares and how they move, "with DubPay where it pays". `cmip-collective-control` stays the one real cMIP, marked in every step that names it as reached by the model (section 3b's note).
+
+### Agreements rule numbers left in v38
+
+None in any step (COUNTED). Left, outside the steps, for P8 (answer 20): the head's example of the citation form (76); Core components' Agreements and `cmip-collective-control` boxes, as S1's list above has them; section 3b's first note (67). S1's list of numbers in steps is now history: each was removed, its sentence kept, or the step rewritten. Two draft 24 headings were in agreement steps and are removed: "A contest of a purchase" (2.4l), "Grant (type 9)" (6.2), with "Made before, made after" (3.9m, 3.9y) and "Fork (type 19)" (3.9w).
+
+### Steps still marked open
+
+COUNTED, eight: 1.5 and 1.5b (Identity rule 34's keeper case: for the Identity pass, answer 23); 1.9 (question 2 below); 3.7w (question 4); 3.7ae (question 5); 3.7ap (question 7); 3.9 (question 3); 3.9al (question 6).
+
+### Questions for the MOR lead
+
+One batch, each with the scribe's lean.
+
+1. **Draft 24's format rules in agreement steps** (a field invalid in a kind of terms; "a judge never handles what it judges"; a threshold of parties as a deal's authority, 1.9c; outcome 2 struck): the core's grammar ("what names what"), or the cMIPs'? S2 kept the field and judge rules as the core's and wrote the authority and outcomes as `stand-in: abandonment clause`'s. *Lean:* field and judge rules stay the core's grammar until P8 says which fields stay; the clause's outcomes are the cMIP's.
+2. **An abandonment clause in the ending condition** (1.9): may a deal's ending condition name its clause, so that a declaration under it counts for the absent party's signature (the scheme they agreed to, 08:58)? *Lean:* yes, where the ending condition names it; otherwise the absent party's signature is asked.
+3. **Successors founded before the fork act** (3.9, answer 7): are they ordered after the fork act that names them? *Lean:* yes in effect: their pointers count only once the fork act that names them is complete, so the fork act is the one ending.
+4. **A rotation declaring an agreement whose pointer closed nothing** (3.7w; answer 6 reads the closing case): what does the identity name? *Lean:* still the old agreement; the rotation's declaration puts nothing in force in Agreements.
+5. **A pointer that meets the ending condition, with no rotation declaring it** (3.7ae): is the old agreement closed? *Lean:* closed in Agreements, its signatures meeting the condition, the identity naming the old one until a rotation; the old runs on for its standing obligations (answer 24).
+6. **Answers 6 and 24 together** (3.9al): once the identity declares the new agreement, under which identity are the old one's standing acts signed? *Lean:* the same identity, each act naming the old agreement it is made under.
+7. **Marks** (3.7ap): does a new agreement still carry a mark naming the power it is made under? *Lean:* no: the pointer's signatures are read against the ending condition, so a mark says nothing the bytes do not; the step keeps the case.
+8. **A refund owed to a payer who bought through no spot** (3.9f's second collective): a debt under answer 10, barring nothing? *Lean:* yes (INFERRED from answers 10 and 11).
+9. **The default ending condition and 13:58** (1.7, 2.6, 6.3, 7.7, 9.6 run on it with "no cMIP"): does "no agreement step is answered by the core alone" ask a stand-in for the default too? *Lean:* no: answer 1 makes it the core's default, and each such step's other answers still run on cMIPs.
+10. **Type numbers** ("Agreements type 13", "type 4") are left in steps beside draft 24's field numbers. *Lean:* keep them with the fields, as answer 22.
+11. **The guarantees list** (13:58, the lead's): S2 used it as six names in every **Beneath**. Should "the unknown party's protection" also name "the known parties' protection, by their signatures" (08:58), now written under "who signed"? *Lean:* keep six, the known parties under "who signed".
+
+12. **A closing the stake cMIP refuses** (1.9d, and every step where a pointer lowers a holder's share): the parties' pointer meets the ending condition, but `stand-in: stake and transfer` answers that the holder must sign. Is the old agreement closed while the lowering is not in force, or does answer 2 apply (the new agreement in force among its signers, the old going on)? *Lean:* the closing is the core's, by the ending condition; the share as lowered is unchecked, or refused, by the cMIP's answer, the holder bound in nothing; stated in each such step once settled.
+
+### Questions for Nobody, allegedly
+
+His, one at a time; each is the MOR lead's to put to him, listed so by the lead.
+
+- **N1 (his).** When a collective changes who it is, the old one still has deals running. The MOR lead's sentence, from your words of 10:15 ("they are operating two collectives at once, because the old one still has obligations via standing agreements"): the old agreement takes no new commitments; what it still owes is done under it, by its last rules, by the people its rules name, until each is delivered; then nothing more is done under it. Is that what you meant? *The scribe's lean:* yes.
+- **N2 (his), after N1.** A collective may dissolve while it still owes a debt to someone who is neither a party nor a buyer through a spot (a supplier, a lender): the core does not stop it; the creditor keeps the signed debt. Is that a cost you accept? *The scribe's lean:* yes, as the MOR lead answered (answer 10).
+
+### The checks
+
+Run by the scribe's `check.py` (outside the repository) on v37 and `docs/decisions.md` at main, v38 and this file. Results:
+
+- PASS: every v37 step number in v38 (214 in v37, 219 in v38, missing [])
+- PASS: every agreement step names a cMIP or stand-in, or is listed untouched (158 name their cMIPs, 35 listed untouched; failing [])
+- PASS: no Agreements rule number in a step ([])
+- PASS: every ledger heading cited exists on main, word for word (27 cited; not found [])
+- PASS: his words against the ledger, typos included (16 quoted; not found [])
+- PASS: every other curly quote in v38 is in the ledger ([])
+- PASS: every stand-in labelled and listed, none named like a real cMIP (14 used, 14 listed; unlabelled steps []; diff set())
+- PASS: spec/README.md and v37 untouched; only the two files changed (['docs/freeze-suite-v38-changes.md', 'spec/03-MOR-freeze-test-suite-v38.md'])
+- PASS: nothing forbidden; no line ends in a space ([])
+- PASS: steps still marked open (listed) (8: ['1.5', '1.5b', '1.9', '3.7w', '3.7ae', '3.7ap', '3.9', '3.9al'])
+
+### The stranger's run
+
+A subagent that had seen neither the ledger nor the scribe's prompt was given v38 alone and three swept steps: 1.9d (a share moving), 7.10 (an ending, and a closing pointer, while a listener's month is open) and 3.9am (a collective cut in three). For each it could list the verdicts and tell, from the step's words, which were a cMIP's (each named in **Runs on**, "its answer, and without it, unchecked") and which the core's (each named in **Beneath**). It stopped where the words did not say enough.
+
+Fixed, needing no choice: in 7.10, the keys still owed given to `stand-in: words of sale`, the publication's clock named in **Runs on**, and the pointer made while her month is open written by answer 24 (the lead's, to check); in 3.9am, the "we use" agreement's ending condition (the default, answer 1) and who signs it for "we are" (its rule for Agreements), the old "we use" running on with the old "we are" (answer 24), the buyers kept whichever "we are" follows, an answer given to each stand-in named, and renew or exit written under "who signed".
+
+Listed, needing a choice (question 12 below): in 1.9d, the verdict where the parties' pointer meets the ownership agreement's ending condition but `stand-in: stake and transfer` answers that the investor must sign to lower its share. Other stops are the step's setup, in steps it was not given (the investor's holding, 7.10's keepers and ending condition, how an agreement is a party: steps 1.4, 7.1, 7.7, 3.1), or formats v38 does not give (answer 25).
