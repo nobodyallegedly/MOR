@@ -29,3 +29,13 @@
 25. **The codemeister's,** with draft 26's encoding; v38 runs reasoned until then.
 26. **As the scribe leans.**
 27. **As 20.**
+
+## Answers to S2's 12, 15:35
+
+*By the numbers of `docs/freeze-suite-v38-changes.md`, "S2 … Questions for the MOR lead". Yes to every lean, the lead's, to check; one addition to 12.*
+
+1 to 11: as the scribe leans.
+
+12: as the scribe leans, with one addition: the holder's share as it stood stays owed under the old agreement as one of its standing obligations (answer 24), delivered under its last rules; the new agreement's lowering binds the holder in nothing. Where two cMIPs of one agreement disagree (the ending condition met, the stake cMIP asking the holder's signature), each answers its own task; composing them is DubLaw's.
+
+N1 and N2 go to him, one at a time.
