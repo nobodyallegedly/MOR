@@ -2,9 +2,9 @@
 
 *Beside `draft-26.md`, not part of it, and not hashed. Sections 1 to 6 by the scribe's session M9, 27 November 2026; sections 7 to 11 and "What draft 26 hands to other texts" by M10. Sections 6.11 and 6.12, and the few edits listed in the trace under "M11", by M11, the whole check. Section 6.13, scenarios 8.22 to 8.26, the wave-four entries of section 5, and the edits listed in the trace under "N1", by N1, the scribe's session of wave four. Sections 6.14 to 6.16, scenarios 8.27 to 8.36, the wave-five entries of section 5, the table of the 26 rules that moved, and the edits listed in the trace under "P2", by P2, the scribe's second session of wave five, on draft 26 as the scribe's session P1 left it; every quotation of a rule P1 changed is brought to its words as they now stand. The edits listed in the trace under "P3", by P3, the scribe's third session of wave five, which wrote draft 26's words for the lead's readings of 20:41, 20:55 and 21:45 and for his answers of 20:50 and 21:42, and ran the whole check; every quotation of a rule P3 changed is brought to its words as they now stand, and the scenarios written on those readings give draft 26's answer. The edits listed in the trace under "P5", by P5, the scribe's session after P3, which took out the pin by knots where keepers are named, on his entries of 22:30, 22:36 and 22:39 and the lead's readings of 22:45; every quotation of a rule P5 changed is brought to its words as they now stand, and the scenarios on the way out by knots or on a dead keeper are rewritten on the new ground. The edits listed in the trace under "P6", by P6, the scribe's session after P5, which wrote his entries of 23:22 to 23:32 (how many keepers are needed; the filling when a keeper dies; the clone) and the lead's readings of 23:22 and 23:33; every quotation of a rule P6 changed is brought to its words as they now stand, and the scenarios these reach give draft 26's answer. The edits listed in the trace under "P7", by P7, the scribe's session after P6, which marked the keepers' socket his (23:52 to 00:00) and wrote the lead's four lines of 23:55; every quotation of a rule P7 changed is brought to its words as they now stand. It explains draft 26 and changes none of its words: where a reason can be read two ways, both are given; where his words and the MOR lead's line differ, both are quoted and each is labelled. It adds no rule, settles nothing left out, and proposes no remedy. Nothing here is a grammar rule: a rule found only here would be no rule.*
 
-**The text it explains.** `draft-26.md` as P7 left it on branch `claude/draft-26-outline-vbtvu7`: `SPEC_DRAFT_26` = `eb8bfb8735a73517f44679d532098bb9779d0e1cc2092a0d3472f5ff223b6fcc` (encoding 3, E2: the core library's `Spec::mir_file_hash`); sha256 of the file's bytes (`sha256sum draft-26.md`) `afadb7d593e7408be8a233b79454d0e5d84310a12cb45d883244f9b8078c4307`. P6's values (`eff0648f…`, `5d63d56f…`) name the text before P7; P5's (`783f6821…`, `a0ee4064…`) the text before P6. Not merged, and not LATEST.
+**The text it explains.** `draft-26.md` as P8 left it on branch `claude/draft-26-outline-vbtvu7`, on the model of 28 November (no versions; the ending condition; the closing pointer; the keeper as a where): `SPEC_DRAFT_26` = HASH_TAGGED (encoding 3, E2: the core library's `Spec::mir_file_hash`); sha256 of the file's bytes (`sha256sum draft-26.md`) HASH_PLAIN. P7's values (`eb8bfb87…`, `afadb7d5…`) name the text before P8; P6's (`eff0648f…`, `5d63d56f…`) the text before P7. Not merged, and not LATEST. **P8** (the scribe's session P8, 28 November): sections 3.3, 4.6 and 4.7, section 5's first entry, 6.17, 7.3, 8 and 9 written on the model; every quotation of draft 26 outside the parts marked "as P7 left them" brought to its words as P8 left them; the parts as P7 left them kept, each marked, and the scenarios and the trace as P7 left them moved to sections 11.7 and 11.8.
 
-**The wish** (Nobody, allegedly, 26 November, 16:46, at the top of `docs/decisions.md` on main): "We need to change the current wish to updating the core after the findings". On what carries over (16:47): "Yes, we’ll go back to analysis, maybe add the focus on agreements". On earlier answers (26 November, 16:03): "Yes, but me saying something does not mean that something was necessarily a good idea".
+**The wish** (Nobody, allegedly, 26 November, 16:46, at the top of `docs/decisions.md` on main): "We need to change the current wish to updating the core after the findings". **His warning** (28 November, 14:06, "Not to be used bare", bigger in the prompts): "This version of agreements is not to be used bare. Big warning needs to be placed on it." "If agreements it’s always a cMIP". On what carries over (16:47): "Yes, we’ll go back to analysis, maybe add the focus on agreements". On earlier answers (26 November, 16:03): "Yes, but me saying something does not mean that something was necessarily a good idea".
 
 **How to read it.** *The ledger* is `docs/decisions.md` on main; an exchange is cited by its bold heading and date. Each exchange ends in an "Arrived at (to check)" line: that line is the MOR lead's reading of the exchange, not his words, and is labelled *the lead's line* here. His words are quoted exactly, typos as the ledger has them. *The lead's reading* is a ruling the MOR lead gave the writing sessions on 27 November, not yet in the ledger; those of the evening are in `docs/lead/notes/2026-11-27-draft-26-readings.md` and `docs/lead/notes/2026-11-27-readings-for-p2.md` on main, every line the lead's (sections 6.14 to 6.16). *The scribe's reading* is this companion's own (the scribe being the session that writes draft 26 and this file). Words in bold or in draft 26's sense are defined in draft 26's §3. Draft 26's rules are cited by their numbers (5.5.1); draft 25's by its own (G4.8), since the reasons were first given under those. *The brief* is `draft-26-brief-2.md`, *the trace* `draft-26-trace.md`, *the outline* `draft-26-outline.md`, all beside this file. *The settled note* is `docs/lead/notes/2026-11-27-settled-by-the-lead.md` on main: every row of it is the lead's reading.
 
@@ -131,13 +131,26 @@ Protect the unknown party. A person who takes part in an agreement through a rol
 
 The old way and the new. Draft 25 protected her by a veto: its default asked every filler to sign every update (G4.8(a)), and its G10.6(b) still let her own version's update condition change her rights. Draft 26 protects her by reach: she signs no update, and no update reaches her. "It’s the protect the unknown party expressed the old way." The cost he names: "a problem that really only impacts subscriptions models I think" (M10's stated costs, section 7).
 
-**Who she is.** Draft 26 says: "said of the holder of a filling: a signer who takes part through a role, and so was not known when the Terms that name that role were made. A spot that a known party of the version naming it fills is filled by a known party's act: that filling is no unknown party's, the known parties' rules apply to it, and an update reaches it as it reaches that party" (§3.2, Unknown party; its last clause P5's, on the lead's answer 1 of 22:30). Before wave five it said, on the settled note's M15 ("A filling is any filling of a role, whenever made"), "Any filling of a role is an unknown party's, whenever it was made". That clause went with his correction of 27 November, 18:46 ("“that fills an unknown party spot”", in "A filling gives no power"), whose line, the lead's, reads: "A spot a known party fills is a known party's act, and the known parties' rule applies to it"; and with the lead's reading F17/C10 (section 6.14). His earlier words are "she is unknown at the time of creation of the agreement". The brief's other reading (item 19), a person whose identity was known when the Terms were made and who still came in through a role, is not the case the correction names: one known to the drafters, and not named in the version as a party, still takes part through a role, and is an unknown party (the scribe's reading).
+**Who she is.** Draft 26 says: "said of the holder of a filling: a signer who takes part through a role, and so was not known when the Terms that name that role were made. A spot that a known party of the same Terms fills is filled by a known party's act: that filling is no unknown party's, and the known parties' rules apply to it" (§3.2, Unknown party; P8 took out "an update reaches it as it reaches that party", there being no update). Before wave five it said, on the settled note's M15 ("A filling is any filling of a role, whenever made"), "Any filling of a role is an unknown party's, whenever it was made". That clause went with his correction of 27 November, 18:46 ("“that fills an unknown party spot”", in "A filling gives no power"), whose line, the lead's, reads: "A spot a known party fills is a known party's act, and the known parties' rule applies to it"; and with the lead's reading F17/C10 (section 6.14). His earlier words are "she is unknown at the time of creation of the agreement". The brief's other reading (item 19), a person whose identity was known when the Terms were made and who still came in through a role, is not the case the correction names: one known to the drafters, and not named in the version as a party, still takes part through a role, and is an unknown party (the scribe's reading).
 
 **Two classes.** He (18:47): "It’s seems important to really make a point that these two are not the same class or IDs and are not bound by the same rules." Draft 26 says so in §0 and at the head of §3.2 (**Two classes**), before any entry; the list of each class's rules there is the lead's line of 18:47, which his words do not give item by item (section 5, "Wave five"; section 6.16, the lead's reading 12 of 20:55).
 
-**What the principle is, and is not** (the settled note's F16, the lead's reading): "G10.6 (a) is not an exception to "built on top, as a test": it is a guarantee no module may break (the admission test), not a rule about how people behave." "Built on top, as a test" (18 November) sends every rule "that settles how people should behave in a deal" to the cMIPs. The principle is kept in the grammar because no cMIP in any socket can be allowed to break it: whatever update condition the Terms name, it is "never asked about a filling" (5.5.7). Whether the principle binds a verifier beyond the rules that apply it is unsaid (the brief, item 16): the lead's line of 16:05 says "applied by Agreements' rules", and a verifier applies only grammar rules (§3.1, Grammar rule).
+**What the principle is, and is not** (the settled note's F16, the lead's reading): "G10.6 (a) is not an exception to "built on top, as a test": it is a guarantee no module may break (the admission test), not a rule about how people behave." "Built on top, as a test" (18 November) sends every rule "that settles how people should behave in a deal" to the cMIPs. The principle is kept in the grammar because no cMIP in any socket can be allowed to break it: whatever update condition the Terms name, it is "never asked about a filling" (5.5.2 as P8 left it: K4's row, "It is never asked about a filling (5.10.6)"; before P8, 5.5.7). Whether the principle binds a verifier beyond the rules that apply it is unsaid (the brief, item 16): the lead's line of 16:05 says "applied by Agreements' rules", and a verifier applies only grammar rules (§3.1, Grammar rule).
 
 ### 3.3 Where draft 26 applies it
+
+*As P8 left draft 26, on the model of 28 November. The list as P7 left it follows, kept, its quotations of draft 26 before P8.*
+
+- **§3.2, Two classes**: "they are protected by the principle: bound by their Terms, and by nothing that follows them, and the agreement is not dissolved while an obligation toward them is open (5.5.3)"; and the known parties "are protected by their own signatures, or by the scheme of signatures they agreed to" (his 08:58, in "No dissolving with open obligations to unknown parties").
+- **5.10.6** "**Nothing that follows reaches a filling.**": "No ending of the agreement, no new agreement, and no closing pointer reaches a filling in any way"; where a keeper cannot be reached, "whether such a filling stands is **unchecked**, with every signed act that bears on it shown beside that answer as evidence" (the MOR lead's reading A8).
+- **5.5.3**: "An ended agreement is dissolved only once no obligation toward an unknown party is open under it"; where the acts held do not show every such obligation closed, "a verifier answers **not shown** for the dissolution, with the reason, and never a yes" (his 08:57; the MOR lead's reading of it and B10, to check). "Once ended, with a filling open. Its spots take no new identities; no new assent to its Terms counts; and a payment that names it is read under its words" (B5, B12).
+- **5.5.6**: "unknown parties excluded: they stay covered by their Terms" (his 15:31 to 15:33).
+- **5.10.7**, **5.10.8**, **5.6.1(b)**: as before, "version" read as the Terms her proof names.
+- **§3.2, Known party**: "A buyer whom the Terms name as a signer is a known party: a partner" (his 08:38): the principle is for those who take part through a spot, as §0 now says.
+
+<!-- before P8 -->
+*The list as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
+
 
 **§5.10, the filling** (the principle itself):
 - **5.10.6** "**No update reaches a filling.** For an unknown party's filling (§3.2), no later update exists"; "no power a version carries is used for its holder but one they gave in an act of their own (5.10.7)". Its holder has no say in updates; no update binds them; what exists for the holder is the version the filling's proof names; "A verifier MUST NOT read any update, or any update condition's answer, as reaching an unknown party's filling"; and (P6, on his 23:22–23:29, which corrects the lead's 22:45, 4): "Where the agreement's keepers no longer show its acts, such a filling stands where a copy that the verifier holds of their signed records shows it (5.10.2, 5.8.4), as many of them as 5.8.3 asks, bound by its version for as long as its words say; with no copy held, whether it stands is **unchecked** (§3.6). Nothing reaches it, a new agreement that names that agreement included (5.8.3)." (P7, the lead's 23:55, 2: the pointer to 5.8.4, where a held copy counts for every answer about order.)
@@ -159,6 +172,8 @@ The old way and the new. Draft 25 protected her by a veto: its default asked eve
 **What it protects her from** (the scribe's summary of the rules above): an update of the known parties changing what she bought, her spot or her place (5.10.6); the update condition of the version she signed reaching her (5.5.7, 5.10.6; draft 25's G10.6(b), gone); a power she never gave, the powers her version carries included, which its known parties gave and which bind only them (5.6.1(b), 5.10.7; "A filling gives no power", 27 November); a clock, a keeper or an anchoring she never accepted ending or ordering what she holds (5.10.8, 5.5.3, 5.13.5). What it does not give her: a say in updates, or any part of a version made after hers unless she signs it. She "can chose not to renew under new terms" (his words, 17:59).
 
 **Left out where it reaches** (each listed in the brief, section 7, and in the trace): which act "the anchoring of the purchase" anchors (item 12); how long a version binds a filling whose words state no term (item 11); what a verifier shows of an agreement the known parties dissolved among themselves while her version still binds (item 13); whether words such as "renewed on the terms then current" are a later version reaching her (item 14; the settled note's M28, the lead's reading: "a buyer who signs them buys that knowingly; the grammar guarantees only that no update she did not sign reaches her"); the line's list "her rights, her spot, her place in the agreement" and "close the offer, or dissolve it among themselves" beyond his words (item 29).
+
+<!-- end before P8 -->
 
 ---
 
@@ -192,9 +207,9 @@ The lead's line: "draft 26 opens with an introduction that says: Agreements is n
 
 1. **Not to be used bare.** Draft 26 §0 opens: "**Agreements is not to be used bare.**", set in bold as the "big warning". His words, first in "No default way out" (17 November): "Yes, it.s still true under the right cMIPs. Agreements is not to be used bare. It's to build on top of."; then in "A late version 3 is rejected" (26 November, 15:37): "Probably right. This version of agreements is not to be used bare. Big warning needs to be placed on it." (the lead's line there: "Where and how the warning is written is for the rewrite"). The settled note's Q22 (the lead's): "The warning is the introduction's, not the verifier's output." Why (the scribe's reading): bare, the grammar has no default exit, no default buyer, no default for many sockets ("Named signers and buyer by assent stay cMIPs", 26 November); people agree through the cMIPs they name.
 2. **Sockets for rule books; more a language.** Draft 26 §0: "It is not one unified way of agreeing. It offers the basic sockets from which rule books are drafted: more a language, used to decide how to agree, than a set of rules for agreeing. The rules people agree by are written in the cMIPs built on it." His words above, with 4.3 below. "than a set of rules for agreeing" is M2's wording (the trace, §0).
-3. **The keeper, as the drafters' way to agree where it is kept.** Draft 26 says it twice, briefly: in §0 ("Among what it offers is the keeper: the way the drafters of an agreement agree on where the agreement is kept") and where the keeper is defined (§3.4, Keeper; 5.8.1), since his bracket asks for it "when introducing the concept of keeper" and the assignment put it in §0. "Kept" for his "stored" is the lead's reading. Then he (07:27): "Yes, stored like on any other relay, no?", which led to the three verbs (4.5).
+3. **The keeper, as the drafters' way to agree where it is kept.** Draft 26 says it twice, briefly: in §0 ("Among what it offers is the keeper: the way the drafters of an agreement agree on where its acts are"; P8's words, on his 08:36 "it states a “where”") and where the keeper is defined (§3.4, Keeper; 5.8.1), since his bracket asks for it "when introducing the concept of keeper" and the assignment put it in §0. "Kept" for his "stored" is the lead's reading. Then he (07:27): "Yes, stored like on any other relay, no?", which led to the three verbs (4.5).
 4. **Knots are MOR-wide; their importance where Rely is.** Draft 26 §0: "Knots are a concept of all of MOR, not of Agreements alone. Their importance in agreements is taken up where this text treats relying on acts." Two readings of "where Rely is" (the outline, §0, item 4; neither chosen): (i) the rules on what an act names and relies on (5.13.1, 5.13.2: "An act names what it relied on"); (ii) relying as a witness act the client signs when a party signs (N10). N10 is not in draft 26 (section 5, N10), so in the text itself only (i) remains. Why knots matter is below, under 5.13.3.
-5. **What it does not say as such.** His "I don’t think it should be stated as such" answers the MOR lead's sentence that Terms naming no keeper depend on every needed signer's knots: draft 26 does not write it. The fact stays in the rules: where Terms name no keeper, the pin is "by knots, where each party in whose name one of those assents is counted has made an act in that same name within the agreement that is shown after every one of those assents" (5.4.1), and a silent signer leaves the Terms not yet in force.
+5. **What it does not say as such.** His "I don’t think it should be stated as such" answers the MOR lead's sentence that Terms naming no keeper depend on every needed signer's knots: draft 26 does not write it. The fact stays in the rules: the pin is by knots: "each party in whose name one of those assents is counted has made an act in that same name within the agreement (a Statement of that agreement, and no other knot) that is shown after every one of those assents" (5.4.1; since P8, keepers or not), and a silent signer leaves the Terms not yet in force.
 
 Not in the entry, so not in §0: the principle (section 3, by the 16:05 line); the three verbs and the relay market (4.5, 4.6).
 
@@ -208,7 +223,10 @@ At 15:40 he said it answers the next question too ("Named signers and buyer by a
 
 It had been coming for ten days. "What the core is for" (17 November): "Those sentences are why agreement was not right… not because the ideas were wrong, but because it forces the protocol into a corner instead of doing what we meant. ID and text are universal, development is definition, the rest is to build on top of." "Between a protocol and a language" (17 November, recorded "for the companion and the paper"): "It's between a protocol and a language almost in some parts". "Built on top, as a test" (18 November): "Yes, agreement is now closer to language than protocol. It.s all about what is built on top." (the lead's line: "a rule that settles how people should behave in a deal belongs to the cMIPs built on top, not to the grammar").
 
-What it does to the text (the scribe's reading): where an earlier draft settled how people behave (who may leave, when a delegation ends, what a receiver owes after an update), draft 26 has a socket and reads only its output. The update condition is the clearest: "It is one simple field, and these grammar rules read one thing of it: asked of a proposed update, **valid** or **not valid**" (5.5.7). The exceptions are where the grammar must hold whatever cMIP is plugged in: the principle (section 3, F16), the fork (5.12.1), a missing act (5.13.3).
+What it does to the text (the scribe's reading): where an earlier draft settled how people behave (who may leave, when a delegation ends, what a receiver owes after an update), draft 26 has a socket and reads only its output. The ending condition is the clearest (the update condition before P8): "These grammar rules read one thing of it: asked whether the agreement is ended by the acts held, **valid** or **not valid**, as that cMIP answers" (5.5.2). The exceptions are where the grammar must hold whatever cMIP is plugged in: the principle (section 3, F16), the fork (5.12.1), a missing act (5.13.3).
+
+<!-- before P8 -->
+*The two tables of this section as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
 
 **What is built on the blocks** (draft 25's §5.1, sent here by draft 26: the trace, §6). Draft 25 quoted him there: "Just be mindful to not attempt to solve something the cMIPs will." Five things people build; the grammar keeps the block under each. References are draft 26's; the scribe has marked the two rows whose block changed.
 
@@ -244,6 +262,8 @@ Draft 25 added: escrow is built as the first row; a buyer's contest reaches the 
 | An agent signs, for a party, an update that changes the judge | the power's rule says how far the agent reaches (K3); the update still needs the gate and the pin (5.6.5(f)) |
 | The one an agent acted for regrets what the agent signed | an update of the agreement, or, while one is available, a counter signature; and a version of the grant (5.6.6); nothing is set aside |
 
+<!-- end before P8 -->
+
 ### 4.4 The layers split so relays can specialize
 
 "Agreements gets an introduction", its addition of 07:37 (27 November). He:
@@ -252,7 +272,7 @@ Draft 25 added: escrow is built as the first row; a buyer's contest reaches the 
 
 The lead's line: "the layers are split so that relays can specialize. A keeper is what a relay specialising in agreements sets itself up to be; the core names the role, and the relay market fills it."
 
-So draft 26 defines a keeper by its role and by what a verifier takes from it, and nothing about how a relay becomes one: a keeper "relays the agreement's acts as any relay does, and vouches for their order only" (5.8.1). Why the grammar needs it at all: the strangers' "A shared sequence is needed for exactly two things: scarcity … and freshness" (section 1). Without a keeper, Terms get their order only from the signers' knots, and nothing proves that nothing later exists.
+So draft 26 defines a keeper by its role and by what a verifier takes from it, and nothing about how a relay becomes one: "The core asks of a keeper what it asks of any relay: it accepts the lodge, relays the act and lets clients fetch it" (5.8.1, as P8 left it; before P8 a keeper "vouches for their order only"). Why the grammar needs it at all: the strangers' "A shared sequence is needed for exactly two things: scarcity … and freshness" (section 1). Since P8, keeper or not, order is the knots' (5.8.4), and nothing proves that nothing later exists: answers of absence are "as shown", naming how many keepers they rest on (5.5.3).
 
 ### 4.5 The three verbs, and why they are in §3.5
 
@@ -260,11 +280,16 @@ The same entry, 07:27. He asked: "Slight misunderstanding are always an opportun
 
 > "Agreed. An uploader lodges, the relay relays, and the client fetches."
 
-The lead's line: "three verbs, one per actor: an uploader **lodges** an act at a relay; the relay **relays** it (takes it in, passes it on, reads nothing, vouches for nothing); a client **fetches** it. A keeper is a relay that relays the agreement's acts and adds the order. "Store", "carry" and "mirror" for what a relay does give way to these when the texts are next touched".
+The lead's line: "three verbs, one per actor: an uploader **lodges** an act at a relay; the relay **relays** it (takes it in, passes it on, reads nothing, vouches for nothing); a client **fetches** it. A keeper is a relay that relays the agreement's acts and adds the order. "Store", "carry" and "mirror" for what a relay does give way to these when the texts are next touched". (*Its "and adds the order" is withdrawn by P8*: "A keeper is a relay: lodge, relay, fetch", 28 November, 10:00–10:01.)
 
 **Why §3.5, and why "MOR's"** (the lead's reading on the outline's rows, as the trace has it: "defined in §3.5 for this text's use and marked as MOR-wide, for Envelopes to carry"). The verbs belong to every layer ("give way to these when the texts are next touched"), and relays are defined in Envelopes. Two readings were open (the outline, section 10, row 6): define them in draft 26, where the exchange was had, or below it and use them here. Draft 26 does the first and says so: "These three verbs are MOR's, for every layer, one for each actor; this text uses them as defined here." Envelopes takes them when it is next written (M10's "What draft 26 hands to other texts"). "Uploader" is his word, wider than Envelopes draft 12's (a bake's signer); draft 26 uses it as he said it (the lead's reading of 09:16, section 6).
 
 ### 4.6 The keeper, "that and nothing more"
+
+**P8: the keeper as a where** (his entries of 28 November, read whole in the ledger; each "Arrived at" line the MOR lead's, to check). "The keeper's ordered record is a service, not the core" (08:27–08:34): "It’s a service people can run to serve agreements, not a must, I’d say"; then (08:36): "To me this is what the keeper line does in agreements, it states a “where” in a way that can be leveraged to check that the “where” is not cheating." "A keeper is a relay: lodge, relay, fetch" (10:00–10:01): "It can, it does not mean it has to." So draft 26's keeper is now "the stated where of the agreement's acts" and "The core asks of a keeper what it asks of any relay: it accepts the lodge, relays the act and lets clients fetch it" (5.8.1); it "gives no order and vouches for nothing" (5.8.1); "a count or a set of the keepers named, never an order" (5.8.3); a keeper that keeps an ordered, signed record is a keeper service, a cMIP's, "labelled as that service's" (5.8.3; the MOR lead's answer 13). The older lines above ("vouches for the chaining only", "only the named place's order counts") are *withdrawn by P8* where they give a keeper an order: knots order acts ("Guarding its end, and forcing the creation of knots used to order stuff", 09:15).
+
+<!-- before P8 -->
+*The reasoning of 26 and 27 November as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
 
 "The place vouches for the chaining only" (26 November, 17:47–17:49). He asked to be reminded of the place: "Remind me “place” definition pls". Then:
 
@@ -284,6 +309,15 @@ Why "nothing more": the MOR lead had set "keeper" aside on 17 November ("The pla
 
 Left out where "nothing more" meets a choice (the brief, items 5 and 6): with several keepers, whether the pin needs every keeper or those that show it where none disagrees; and what a keeper answers beyond order (draft 25's "what is whole, who holds what, whether a period has passed, or whether something was made public"): (i) nothing, on "that and nothing more"; (ii) a period passed, on the 27 November line "Terms state their anchors (a keeper, a clock to anchor to, or both)". Draft 26 writes 5.8.4 "for order only" and says "A keeper is not a clock" (5.8.6, the lead's reading of 10:07).
 
+<!-- end before P8 -->
+
+### 4.7 Collectives: "we are", "we use", "we offer", and the dual framework
+
+*Companion material, not rules: nothing below is written in draft 26, which knows no collective (§3.2, **Shares**; 5.5.6).*
+
+He (13:53, "We are, we use, we offer"): "One agreement for “we are” one agreement for “we use” other agreements for “we offer” no?" The MOR lead's line, to check: a collective is built in separate agreements; a change to how it is paid is a change to "we use", and asks nothing of those who deal with "we are"; one that puts everything in one agreement makes every change a change of who it is, and every counterparty is asked to renew or exit (5.5.6): its choice, not the core's.
+
+The dual agreement framework (09:17–09:18, "Collectives: the dual agreement framework"): "True, the dual agreement framework solves it nicely." The MOR lead's line: an outer agreement that faces the world and rarely ends, inner ones that change; who acts for the outer one is its powers' rule, by a cMIP. Then (10:02–10:15, "A change of who they are: renew or exit") the framework "did not solve the problem" of a change of who they are: "Everybody else needs to renew or exit, thus forcing everyone to decide in order to move on." And (10:17–10:18): "So, really it’s “the board of directors has changed, do you wish to proceed with the new board” which is a fair question I think". And (15:31–15:33, "An agreement that acts as a party ends only with those it owes"): "A collective as such does not exist in MOR anymore, one can be created using cMIP that leverages agreement." The framework absorbs churn; it does not carry a counterparty across a change of who they are. Templates for both are DubLaw's (`docs/lead/notes/2026-11-28-for-dubsar-from-this-round.md`, the lead's).
 ---
 
 ## 5. The reasoning, rule by rule
@@ -293,6 +327,33 @@ Left out where "nothing more" meets a choice (the brief, items 5 and 6): with se
 **The two questions.** Draft 25's §1 ended: "Every grammar rule here answers two questions: which lie does it expose that signed, ordered text cannot already expose, and whom does it protect who did not choose it." Draft 26 leaves the sentence out, as reasoning ("Only rules in the hashed text", 17 November; the trace, §1). It came from Fable's review of 10 November: "First: is there a lie here that signed, ordered text cannot already expose? If not, it is only text. Second: does catching it hurt someone who did not choose the rule? If not, it is a task for a cMIP." (`docs/reviews/fable-after-the-task-list.md`, Fable's proposal there). The *lie exposed* and *protects* lines below are each rule group's answers to the two questions.
 
 **How each entry reads.** *Draft 25*: the rule it was, and what the brief sorted it. *What changed*: in a line. *The exchange*: heading and date, his words, and the lead's line where it says more. Where a change rests on a reading of the MOR lead's of 27 November, the entry says so and section 6 gives the reading in full. An entry marked *new* has no draft 25 rule; the brief's numbers N1 to N10 are given.
+
+### P8: the reasoning on the model of 28 November
+
+*The scribe's session P8. Each rule's source is in section 9.1. His words are quoted from the ledger, read whole; every "Arrived at" line is the MOR lead's, to check. The entries of this section below this one are the reasoning for draft 26 before P8: their quotations are of draft 26 as P7 left it (b58e4171), and their rule numbers are that text's.*
+
+**No versions** (5.5.1). "No versions: the chain guards the end and forces knots" (09:10–09:15): "It”s more a protection for dissolving the agreement than a continuation of the agreement."; "Guarding its end, and forcing the creation of knots used to order stuff". And "Nothing is updated: new acts" (08:52–08:53): "Nothing is ever updated, it’s new acts." So: "Terms are never replaced. An agreement has one Terms act, and lives until its ending condition is met" (5.5.1). What left with it: every replacement, `replaces`, the gate and pin of a replacement, lateness, the fork of Terms, the resolving update of Terms, and the word "update" (the report, "What P8 changed").
+
+**The ending condition** (5.5.2). "The ending condition" (08:54–08:56): "Dissolved, by signatures or any other conditions the bytes can check, anchoring to a clock for example." The default, every known party's signature, is the MOR lead's answer 1, to check. An ending by clock needs no further act: the MOR lead's reading B15, to check, written as "It is the one ending that comes by itself" (5.5.2(f)). Which act ends an agreement with no successor (the no-versions test's question 4) is not in the sorted readings: draft 26 gives it to a K7 kind ("These grammar rules name no Statement kind that ends an agreement: a kind that does is a K7 cMIP's", 5.5.2(e)), the least the rule needs, listed for the MOR lead (the report).
+
+**Ended and dissolved** (5.5.3). "No dissolving with open obligations to unknown parties" (08:57): "Important, an agreement cannot be dissolved if it has open obligations towards unknown parties". The old agreement and what follows: "The old collective and new commitments: cMIP business" (15:28–15:30): "It can, but it needs the approval of the signatures the commitment is with. Again, cMIP business". The answers of absence: “"As far as I can see" is the honest answer” (09:53–09:59): "As far as I can see is the honest answer, and also why the core supports the multiple keepers I’d say."
+
+**The closing pointer** (5.5.4). "The closing pointer: no longer valid, and it once existed" (09:05–09:09): "this act is not valid anymore,  however, we want the users of this next act to know that it once existed. No more, no less. Right?" With "Ending the old agreement is an act on its chain" (08:46): "The pointing to it is what closes it." And "A keeper is a relay: lodge, relay, fetch" (10:01), read by the MOR lead as the pointer closing "wherever the new agreement is kept". Only where its signatures meet the old ending condition: the MOR lead's reading A1, to check, which withdraws his own 09:08 "for each known party of the old one who signs it, and for no one else".
+
+**Two endings** (5.5.5). "A fork is a fork" with his 22:36 (26 November): "Disputes, races… that’s where it’s a fork and rules have to settle." The MOR lead's reading A2 and answers 7, 9 and 17, to check.
+
+**An agreement that acts as a party** (5.5.6). "An agreement that acts as a party ends only with those it owes" (15:31–15:33): "That agreement cannot come to an end unless all parties agree. (Unknown parties excluded, they remain covered by terms)". No succession: "A change of who they are: renew or exit" (10:15), the MOR lead's reading in it, to check.
+
+**The keeper** (5.8.1 to 5.8.4): section 4.6, P8's paragraph. **The clock** (5.8.5, 5.8.6): "An act that names a clock is anchored to it" (10:19): "An act cannot name a clock without itself being anchored to it."; (10:20): "So an agreement that states a clock is provisional until anchored." "Not shown", "not yet anchored", and "refused" only for a condition in time that names no clock, are the MOR lead's reading of 10:20, to check.
+
+**Two protections** (§3.2, Two classes). His 08:58: "The known parties are protected by their signatures, or the signature scheme they agreed to." "A buyer named as a signer is a partner" (08:37–08:38): "Then Sam decided to enter a partnership with his customers".
+
+**What an agreement does is a cMIP's** (§6, its opening; §1). "Shares and how they move are the cMIPs'" (13:53–13:58): "It’s all in the cMIPs"; "It’s easier than that. If agreements it’s always a cMIP". The guarantees beneath are the MOR lead's reading of 13:58, to check.
+
+**The keeper's where for a reliance** (5.13.2, 5.8.3). "Rely when a relay dies: a proof, not one for the bytes" (09:01–09:02): "It still a proof, no one for the bytes to check, but a proof nonetheless."
+
+<!-- before P8 -->
+*The entries below, to the end of section 5, as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
 
 ### Wave five: his three decisions of 27 November, evening
 
@@ -576,6 +637,8 @@ No rule of §5.11 changed: G11.1, G11.2, G11.3, G11.4(e), G11.6(a), G11.6(b), G1
 
 *Status*: not a rule of draft 26. The lead's reading of 09:16: "N10 (the client's reliance) is client conformance in the companion, not a rule." Its place among the client duties is listed for Development (M10). *What it is*: when a party signs an agreement, its client also signs a witness act (Identity draft 16, rule 10) relying on the words' Text act, so that if the words' signer later leaves them out by a change of key, rule 34 keeps them visible, as disputed. *The exchange*: "Signing an agreement relies on its words" (26 November, 18:30–18:37). The MOR lead leaned that Terms naming their words count as relying on them, a new standing in Identity. He: "Clients can easily fix this by automatically rely on the text when an agreement is signed." and (18:37): "Just to finish… rely is the solution to all acts someone has to rely on." *The lead's lines*: "nothing is added to Identity or Agreements. When a party signs an agreement, its client also signs a witness act relying on the words' Text act (client conformance) … The MOR lead's lean is not taken"; and "whoever needs another's act to keep standing relies on it (a witness act, signed by their client). Relying is how any act someone depends on survives its signer's key change." Left out: whether her client relies on the other parties' assents too (item 21; the settled note's F4); that private words' key is delivered to each party first (item 22; F10). The one client duty draft 26 itself carries is 5.12.9.
 
+<!-- end before P8 -->
+
 ## 6. The readings marked as the MOR lead's
 
 **In plain words.** In some places the ledger could be read two ways, or said less than a rule needs. There the MOR lead chose one reading, and draft 26 is written on it. Each such reading is set out here: the lead's words, the rule it shaped, and what the other reading would have put in the text. None of them is his decision; each can be revisited with him.
@@ -583,6 +646,9 @@ No rule of §5.11 changed: G11.1, G11.2, G11.3, G11.4(e), G11.6(a), G11.6(b), G1
 None of these readings is in the ledger on main: each was given by the MOR lead to the writing sessions on 27 November and is quoted as the trace has it. Where a time is given, it is the lead's; the rulings on the brief's items and on the held rules came with the outline's and the sessions' assignments, and no time is recorded for them. Where a reading still leaves a choice, it is listed, not made: "Where a reading above meets a rule and still leaves a choice, list it; do not choose." (the lead).
 
 Each entry gives, after the reading, *Shaped*: the rules written on it; and *The other reading*: what the brief's row, or the trace's row to check that asked it, gave as the other way; and, where it is plain, what a verifier would answer on it (the scribe's reading).
+
+<!-- before P8 -->
+*The readings of sections 6.1 to 6.16 as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
 
 ### 6.1 The rulings on the brief's heaviest items
 
@@ -721,38 +787,38 @@ Every row of the settled note is the lead's reading. Those draft 26 rests on, wi
 **The pin and lateness**
 
 - **C2 (which assents the pin reaches, with an `in_force` cMIP)**: "Only the assents the agreement's own rule requires; the cMIP in `in_force` names which (K2's output). Not every assent counted." *Rests on*: "In force once pinned" (18 November): "each needed signer acting after completion". *Shaped*: 5.4.1 (P1-17), §6 K2 (P1-52).
-- **C3 (an update's pin: its own knots, or the acts that put it through the gate)**: "Either: the update's own knots, or those of the acts that put it through the gate. (ii)." *Rests on*: "The gate and the pin". *Shaped*: 5.5.1(b) (P1-20).
-- **C17, F2 (5.5.4(a), one act or several together)**: "Together. L is late when no choice of assents enough for L's gate avoids an act shown after acts enough for F's gate. Read act by act, a two-of-three update with three assents could never be late." *Rests on*: "A late version 3 is rejected"; "Knots are knots". *Shaped*: 5.5.4(a) (P1-23, P1-62).
-- **F3 (5.5.5(a)'s "in order" sentence)**: "It is one case of 5.5.4(a), not a second test: a second assent naming the first is a knot that may show the second update late by 5.5.4(a)." *Rests on*: "Knots are knots" (M11's item 1). *Shaped*: 5.5.5(a) (P1-26).
-- **F4 (the acts that put a version in force: completing assents, or pin acts too)**: "For 5.5.4(a), the acts enough for the gate; the pin is not part of lateness. For 5.5.1(b), the update is pinned by its own knots or by those acts' (C3)." *Rests on*: "The gate and the pin". *Shaped*: 5.5.1(b) (P1-20), 5.5.4 and its (a), (b) (P1-22 to 24, P1-61), §3.3 **Late update** (P1-9).
-- **C4 (is "valid" answered of an update whose original is not in force)**: "Valid, since the gate asks only whether the rule allows it; in force waits for the original. Two answers, "valid" and "not in force: <reason>"." *Rests on*: "Valid and in force, two words, two jobs". *Shaped*: 5.5.1, "Valid, and in force" (P1-21).
+- **C3 (an update's pin: its own knots, or the acts that put it through the gate)**: "Either: the update's own knots, or those of the acts that put it through the gate. (ii)." *Rests on*: "The gate and the pin". *Shaped*: 5.5.1(b) (P1-20). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C17, F2 (5.5.4(a), one act or several together)**: "Together. L is late when no choice of assents enough for L's gate avoids an act shown after acts enough for F's gate. Read act by act, a two-of-three update with three assents could never be late." *Rests on*: "A late version 3 is rejected"; "Knots are knots". *Shaped*: 5.5.4(a) (P1-23, P1-62). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **F3 (5.5.5(a)'s "in order" sentence)**: "It is one case of 5.5.4(a), not a second test: a second assent naming the first is a knot that may show the second update late by 5.5.4(a)." *Rests on*: "Knots are knots" (M11's item 1). *Shaped*: 5.5.5(a) (P1-26). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **F4 (the acts that put a version in force: completing assents, or pin acts too)**: "For 5.5.4(a), the acts enough for the gate; the pin is not part of lateness. For 5.5.1(b), the update is pinned by its own knots or by those acts' (C3)." *Rests on*: "The gate and the pin". *Shaped*: 5.5.1(b) (P1-20), 5.5.4 and its (a), (b) (P1-22 to 24, P1-61), §3.3 **Late update** (P1-9). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C4 (is "valid" answered of an update whose original is not in force)**: "Valid, since the gate asks only whether the rule allows it; in force waits for the original. Two answers, "valid" and "not in force: <reason>"." *Rests on*: "Valid and in force, two words, two jobs". *Shaped*: 5.5.1, "Valid, and in force" (P1-21). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C5, F4's phantom `previous`**: "An act named and not held leaves the pin unchecked wherever it could be a needed party's later act." *Rests on*: "A missing act stays unchecked". *Shaped*: 5.4.1 (P1-18).
 - **C20 (which acts pin a party's side)**: "A Terms act or Statement of that agreement, in that name. The pin is the party acting within the agreement after completion, not any knot anywhere." *Rests on*: "In force once pinned". *Shaped*: 5.4.1 (P1-17).
-- **C30 (a forked assent and a first version)**: "Neither tip counts for the coming into force either." *Rests on*: "A fork is a fork"; 5.7.2. *Shaped*: 5.7.2 (P1-33).
+- **C30 (a forked assent and a first version)**: "Neither tip counts for the coming into force either." *Rests on*: "A fork is a fork"; 5.7.2. *Shaped*: 5.7.2 (P1-33). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C15 (two counter signatures in one name that nothing orders)**: "By knots or keepers only; where nothing orders them, not by id: both stand as one withdrawal." *Rests on*: "Knots are knots". *Shaped*: 5.4.5 (P1-19).
-- **F5, the self-fork after an update is in force**: "A fork of a line made after an update is in force does not reach back: the update stays in force, and the fork is that signer's, to resolve in her line. The text says so in one sentence (5.12.3's last, made a rule)." *Rests on*: "In force once pinned": "no signature taken back after it". *Shaped*: 5.12.3 (P1-47).
+- **F5, the self-fork after an update is in force**: "A fork of a line made after an update is in force does not reach back: the update stays in force, and the fork is that signer's, to resolve in her line. The text says so in one sentence (5.12.3's last, made a rule)." *Rests on*: "In force once pinned": "no signature taken back after it". *Shaped*: 5.12.3 (P1-47). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **F7 (two acts, same `previous`, ordered by `prev`)**: "A fork of the agreement line (5.7.2); `prev` orders them for "shown after" but the line is still forked, and the signer resolves it by a resolving act." *Rests on*: "Two threads, two owners"; "Knots are knots". *Shaped*: 5.7.2 (P1-32), §3.3 **Fork** (P1-10).
 - **C46a ("valid, not in force": two answers)**: "Two answers, the second with its reason." *Rests on*: as C4. *Shaped*: 5.5.1, "Valid, and in force" (P1-21).
-- **C46b (F's own pin left out of L's test)**: "Yes: lateness is against the gate, not the pin." *Rests on*: as F4. *Shaped*: 5.5.4 (P1-22 to 24, P1-61), §3.3 **Late update** (P1-9).
-- **C46c ("two assents, same previous": the line's fork only)**: "The line's fork only (5.7.2); the gate makes no test of its own." *Rests on*: M11's item 1. *Shaped*: 5.5.5(a) (P1-27).
+- **C46b (F's own pin left out of L's test)**: "Yes: lateness is against the gate, not the pin." *Rests on*: as F4. *Shaped*: 5.5.4 (P1-22 to 24, P1-61), §3.3 **Late update** (P1-9). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C46c ("two assents, same previous": the line's fork only)**: "The line's fork only (5.7.2); the gate makes no test of its own." *Rests on*: M11's item 1. *Shaped*: 5.5.5(a) (P1-27). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 **Keepers and anchoring**
 
-- **C13, F16, S5 (several keepers, one silent)**: "Every keeper named must show it, or "not shown"; the answer changes only when the silent keeper shows it, or a version every needed signer signs replaces the keepers." *Rests on*: "Two keepers named, both needed" (16:44); "A dead keeper" (18:51). *Shaped*: 5.8.3 (P1-35). *Its last clause withdrawn* (P5, after his 22:36 and 22:39; section 6.16).
-- **C28 (a keeper that contradicts a knot)**: "Only the answers resting on that record are "not shown, the keeper contradicts the acts"; the record is kept as evidence." *Rests on*: "The gate and the pin" (M5's row 2). *Shaped*: 5.5.4(c) (P1-25), 5.8.4 (P1-37).
+- **C13, F16, S5 (several keepers, one silent)**: "Every keeper named must show it, or "not shown"; the answer changes only when the silent keeper shows it, or a version every needed signer signs replaces the keepers." *Rests on*: "Two keepers named, both needed" (16:44); "A dead keeper" (18:51). *Shaped*: 5.8.3 (P1-35). *Its last clause withdrawn* (P5, after his 22:36 and 22:39; section 6.16). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C28 (a keeper that contradicts a knot)**: "Only the answers resting on that record are "not shown, the keeper contradicts the acts"; the record is kept as evidence." *Rests on*: "The gate and the pin" (M5's row 2). *Shaped*: 5.5.4(c) (P1-25), 5.8.4 (P1-37). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C46d (two keepers agree on A and B, disagree on C)**: "Only answers resting on C are not shown." *Rests on*: "More than one place". *Shaped*: 5.8.3 (P1-34).
 - **C31, F8 (the reader's own anchoring or keeper)**: "Given beside the Terms' answer, labelled the reader's, never in its place." *Rests on*: "Whose place counts". *Shaped*: 5.13.5 (P1-51).
 - **C9 (grammar case 64)**: "Retired; its sentence is gone." *Rests on*: "A condition in time with no anchor is refused". *Shaped*: no words of draft 26 change: case 64 is retired, its sentence already gone (P1). *The other reading*: case 64 kept as a vector, re-read under 5.8.6: Terms naming a cMIP that declares a need for a clock, and naming none, **invalid**; the scribe's reading.
 - **C8, C35, C34 (key 8's form; sorted; key 9)**: "One form, always a list, sorted, each once; key 9 (the clock) kept, 32 bytes." *Rests on*: "More than one place"; "Ana's month ends by the clock". *Shaped*: encoding 3, section 4 (key 8), E18 and E6 (P2). *The other reading* (P1 could not carry it into draft 26's words; P2 carried it into encoding 3): encoding 3 as N1 left it: key 8 in two forms told apart by their bytes (one keeper bare, several a list of two or more); the keeper list in the writer's order; key 9 open.
-- **F19 (§1 against §5.8)**: "§1 stands with one word: no rule needs a particular server to remain *for the agreement to be left*; a dead keeper is left by a version every needed signer signs." *Rests on*: "A dead keeper" (18:51). *Shaped*: §1 (P1-2). *Its last clause withdrawn* (P5, after his 22:36 and 22:39; section 6.16).
+- **F19 (§1 against §5.8)**: "§1 stands with one word: no rule needs a particular server to remain *for the agreement to be left*; a dead keeper is left by a version every needed signer signs." *Rests on*: "A dead keeper" (18:51). *Shaped*: §1 (P1-2). *Its last clause withdrawn* (P5, after his 22:36 and 22:39; section 6.16). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 **The unknown party**
 
-- **F9, F10, C24**: "A filling's assent gives no power; a power can be used for her only where she gave it in an act of her own. Her version's K1 and K5 cMIPs are given her version and its acts, not later versions: the grammar hands them nothing a later version made. Her own assent to a later version is her signature, counted or not." *Rests on*: "A filling gives no power" (18:44–18:46). *Shaped*: 5.10.7 (P1-42), 5.10.2 (P1-39), 5.10.8 (P1-44), with 5.6.1(b) (P1-29).
+- **F9, F10, C24**: "A filling's assent gives no power; a power can be used for her only where she gave it in an act of her own. Her version's K1 and K5 cMIPs are given her version and its acts, not later versions: the grammar hands them nothing a later version made. Her own assent to a later version is her signature, counted or not." *Rests on*: "A filling gives no power" (18:44–18:46). *Shaped*: 5.10.7 (P1-42), 5.10.2 (P1-39), 5.10.8 (P1-44), with 5.6.1(b) (P1-29). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **F17, C10**: "A spot a known party fills is a known party's act; she is no unknown party there; grammar case 74 is kept, renamed." *Rests on*: "that fills an unknown party spot" (18:46–18:47). *Shaped*: 5.4.3, 5.6.1(c), 5.6.2 (P1-55 to 57, with §3.2 **Unknown party**, P1-6, and 5.10.6, P1-40).
-- **C23 (a filling under a dropped role)**: "A spot named by the version and position the asker gives (B)." *Rests on*: "For the unknown party there is no update". *Shaped*: 5.10.2 (P1-39).
+- **C23 (a filling under a dropped role)**: "A spot named by the version and position the asker gives (B)." *Rests on*: "For the unknown party there is no update". *Shaped*: 5.10.2 (P1-39). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C27 (a filling's term with no clock)**: "Nothing shown." *Rests on*: "A condition in time with no anchor is refused". *Shaped*: 5.10.8 (P1-43).
-- **C14 (agreements named as parties)**: "Known parties, as the version names them; how they sign is their own rule's." *Rests on*: "The known parties of a version are the signers it names" (16:46); the lead's reading of 09:47. *Shaped*: §3.2 **Known party** (P1-5).
-- **C18 (which version gives a power)**: "The version `under` names." *Rests on*: "A power given binds its giver". *Shaped*: 5.6.1(b) (P1-29).
-- **C19 (an act under a power against the replacing Terms, unordered)**: "Not shown as binding; not a fork of the versions." *Rests on*: "The gate and the pin". *Shaped*: 5.6.4 (P1-31).
+- **C14 (agreements named as parties)**: "Known parties, as the version names them; how they sign is their own rule's." *Rests on*: "The known parties of a version are the signers it names" (16:46); the lead's reading of 09:47. *Shaped*: §3.2 **Known party** (P1-5). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C18 (which version gives a power)**: "The version `under` names." *Rests on*: "A power given binds its giver". *Shaped*: 5.6.1(b) (P1-29). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **C19 (an act under a power against the replacing Terms, unordered)**: "Not shown as binding; not a fork of the versions." *Rests on*: "The gate and the pin". *Shaped*: 5.6.4 (P1-31). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **F11 (words disowned by a rotation; a Text act invalid under Text's rule)**: "Terms whose words act is void are unchecked as to their words, the Terms standing; parties' clients relied on the words, so the case is rare; a Text act invalid under its own layer is no Text act for 5.2.2." *Rests on*: "Signing an agreement relies on its words". *Shaped*: 5.2.2 (P1-15).
 **Words, sets, specifications**
 
@@ -764,18 +830,18 @@ Every row of the settled note is the lead's reading. Those draft 26 rests on, wi
 - **C44 (K1's input)**: "The act id of the words." *Rests on*: "The words of Terms are a Text act". *Shaped*: encoding 3, E8 (P2); §6's K1 row already gives the act id. *The other reading* (P1 could not carry it into draft 26's words; P2 carried it into encoding 3): K1 given the words (the Text act's content) rather than its act id; draft 26's K1 row already gives the act id, so no answer changes (the scribe's reading).
 **Forks, resolves, answers**
 
-- **C7 (a resolving update's word)**: "Valid and in force, as any update." *Rests on*: "A fork is a fork". *Shaped*: no words change: 5.12.4 already gives a resolving update of Terms **valid**, and **in force** once pinned (P1). *The other reading*: **shown**, as 5.12.5 gives one made under a power (M10's "For M11", 4; section 6.12, row 4).
+- **C7 (a resolving update's word)**: "Valid and in force, as any update." *Rests on*: "A fork is a fork". *Shaped*: no words change: 5.12.4 already gives a resolving update of Terms **valid**, and **in force** once pinned (P1). *The other reading*: **shown**, as 5.12.5 gives one made under a power (M10's "For M11", 4; section 6.12, row 4). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C39 (a line resolve's word)**: "Shown." *Rests on*: 5.12. *Shaped*: 5.12.4 (P1-48).
-- **C12, F12 (5.6.4's unordered case; a contest's version)**: "Not shown, nothing more; a contest needs its Terms shown as a version, in force or not." *Rests on*: "The gate and the pin". *Shaped*: 5.6.4 (P1-31), 5.11.8 (P1-45).
+- **C12, F12 (5.6.4's unordered case; a contest's version)**: "Not shown, nothing more; a contest needs its Terms shown as a version, in force or not." *Rests on*: "The gate and the pin". *Shaped*: 5.6.4 (P1-31), 5.11.8 (P1-45). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C29 (a verifier that stops)**: "Unchecked, saying how far." *Rests on*: "Every refusal states its reason". *Shaped*: §3.6 **Unchecked** (P1-11).
 - **C32 (a contest by one who is not the holder)**: "Shown as a contest, not shown as a baker's." *Rests on*: "The holder at the act cited". *Shaped*: 5.11.9 (P1-46).
 - **F6, C26 (`refs` and `prev` as knots)**: "Knots. Encoding 3's E3 is wrong and follows draft 26." *Rests on*: "Knots are knots". *Shaped*: 5.13.1 (P1-49); encoding 3, E3 (P2).
 - **C25 (which layers' fields)**: "Every layer of the core; a verifier decodes the core's six." *Rests on*: "Knots are knots". *Shaped*: 5.13.1 (P1-50).
-- **C6 (the version a payment names)**: "Any version shown as a version of that agreement; whether a filling stood under it is 5.10's." *Rests on*: "The holder at the act cited". *Shaped*: 5.1.4 (P1-14).
-- **F13 (which Terms are asked for a payment's version)**: "The version the payer's claim names; the receiver's receipt is the receiver's word. For the Money review." *Rests on*: "What defines Money". *Shaped*: no words change: for the Money review (P1). *The other reading*: the version the receiver's receipt names, the question as Fable put it (pull request 306).
+- **C6 (the version a payment names)**: "Any version shown as a version of that agreement; whether a filling stood under it is 5.10's." *Rests on*: "The holder at the act cited". *Shaped*: 5.1.4 (P1-14). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **F13 (which Terms are asked for a payment's version)**: "The version the payer's claim names; the receiver's receipt is the receiver's word. For the Money review." *Rests on*: "What defines Money". *Shaped*: no words change: for the Money review (P1). *The other reading*: the version the receiver's receipt names, the question as Fable put it (pull request 306). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **C11, F20 (G14's 15 cases; Envelopes' rules cited)**: "Moved to Envelopes' vectors, except those the three rules draft 26 keeps (5.1.4, 5.11.9, §4.4 case 7) still exercise; the citations are draft 26's own until Envelopes is written, listed "for Envelopes"." *Rests on*: "Where three rules live". *Shaped*: no words change: the citations stay draft 26's, listed "for Envelopes" (P1; last section). *The other reading*: G14's fifteen cases kept among draft 26's own vectors, Envelopes' rules cited as draft 25 cited them.
 - **F21, C40 (§5.11's reports without bytes)**: "§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it." *Rests on*: "Where three rules live". *Shaped*: no words change: §5.11 already names the report block (P1). *The other reading*: §5.11's answers about reports given without the block, as draft 26's own; on the reading, every such answer is **unchecked** until the MICS carries the block.
-- **F22 (a draft 27 Terms updating a draft 26 agreement)**: "Open: for the end of the stint, with Development." *Rests on*: queued (14:53). *Shaped*: no words change: open, for the end of the stint, with Development (P1). *The other reading*: none chosen; the question stays open, listed for P3's report.
+- **F22 (a draft 27 Terms updating a draft 26 agreement)**: "Open: for the end of the stint, with Development." *Rests on*: queued (14:53). *Shaped*: no words change: open, for the end of the stint, with Development (P1). *The other reading*: none chosen; the question stays open, listed for P3's report. *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 - **F18 (where the principle is written)**: "In the introduction, stated; applied by the rules; the companion carries the reasoning." *Rests on*: "Agreements gets an introduction"; "two classes of party" (18:47). *Shaped*: §0 (P1-1).
 - **C37, C38, C41, C42, C43**: "The parts' leans stand: no question of its own; the known parties handed; the two lists apart; the "or any other" fork is 5.12.2's as written; a piece held names nothing." *Rests on*: —. *Shaped*: no words change: the parts' leans stand (P1). *The other reading*: each part's own question, as the codemeister's impact sheet (pull request 311) puts it; not re-read here.
 
@@ -807,9 +873,9 @@ Every row of the settled note is the lead's reading. Those draft 26 rests on, wi
 
 **After P3** (added by P5). *His three entries*, each read whole in the ledger, the MOR lead's turns and lines labelled as the ledger has them.
 
-- **An update the keeper never showed is no update** (27 November, 22:27–22:30; the scribe's P3, held for him: two of three signed an update the dead keeper never pins; all three then sign a new version naming a new keeper; as written, the two read as a fork). The MOR lead leaned no fork: by "act exists @", the two's update never existed for the agreement, and the version all three sign stands; he called the two's update valid. He: "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper." *The lead's line*: "where Terms name a keeper, an update not shown at that keeper is not valid: it is no update of the version, competes with nothing, and makes no fork. The version every known party signs, naming a new keeper, stands. The MOR lead's "valid" for it is withdrawn. The MOR lead's reading of how this fits "Valid and in force, two words, two jobs" (26 November), to check: with keepers named, the assents the update condition counts are those the keepers show; so the gate, and not the pin alone, waits on the keeper." Its "The version every known party signs, naming a new keeper, stands" is read again at 22:36: what all three sign is a new agreement, not a version (the lead's line of 22:36).
-- **A dead keeper: the agreement is dead; what follows is a new act** (27 November, 22:36; after "An update the keeper never showed is no update", and the scribe's and the MOR lead's narrowing of 22:33, in which an update every known party signs leaves a dead keeper by knots). He: "There is no update. It’s a new act. If you always think about it as a new act then it’s easier to solve these ones. The act is found at the tip of its chain, and it points to a keeper, and the keeper is dead. Angreement is dead. So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage, but the truth is, every single time, it’s a new act. Disputes, races… that’s where it’s a fork and rules have to settle." *The lead's line*: "an agreement whose tip names a keeper that is dead is dead. What its parties do next is a new agreement: a new first act, which may name the dead one to show lineage, and is not an update of it. A fork is for disputes and races, settled by rules. The MOR lead's wording "a dead keeper is left by a new version that every known party signs" (21:42) and the hatch of 18:51 for leaving a dead keeper by knots, read as an update, are to be read again against this; the MOR lead holds the scribe's P4 until they are."
-- **No rule for an exception logic covers** (27 November, 22:37–22:39). The MOR lead asked whether the hatch of 18:51 (an update every needed signer signs is pinned by their knots, whatever keeper is named) has any use left while the keeper lives, leaning to drop it: with keepers named, every update goes through them, and parties who want out sign a new agreement. He: "They didn’t skip it. They just created a new act because the previous one was a dead end no? Are you creating rules for exceptions that are covered by logic?" *The lead's line*: "the hatch is dropped. Where Terms name keepers, every update is pinned by them; where they name none, by knots. Parties who leave a keeper, dead or alive, make a new agreement, which may name the old one. The MOR lead's "an update every needed signer signs needs no keeper" (18:51), the split of the pin built on it, and the narrowing of 22:33 are withdrawn. A rule is not written for a case the other rules already settle."
+- **An update the keeper never showed is no update** (27 November, 22:27–22:30; the scribe's P3, held for him: two of three signed an update the dead keeper never pins; all three then sign a new version naming a new keeper; as written, the two read as a fork). The MOR lead leaned no fork: by "act exists @", the two's update never existed for the agreement, and the version all three sign stands; he called the two's update valid. He: "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper." *The lead's line*: "where Terms name a keeper, an update not shown at that keeper is not valid: it is no update of the version, competes with nothing, and makes no fork. The version every known party signs, naming a new keeper, stands. The MOR lead's "valid" for it is withdrawn. The MOR lead's reading of how this fits "Valid and in force, two words, two jobs" (26 November), to check: with keepers named, the assents the update condition counts are those the keepers show; so the gate, and not the pin alone, waits on the keeper." Its "The version every known party signs, naming a new keeper, stands" is read again at 22:36: what all three sign is a new agreement, not a version (the lead's line of 22:36). *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **A dead keeper: the agreement is dead; what follows is a new act** (27 November, 22:36; after "An update the keeper never showed is no update", and the scribe's and the MOR lead's narrowing of 22:33, in which an update every known party signs leaves a dead keeper by knots). He: "There is no update. It’s a new act. If you always think about it as a new act then it’s easier to solve these ones. The act is found at the tip of its chain, and it points to a keeper, and the keeper is dead. Angreement is dead. So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage, but the truth is, every single time, it’s a new act. Disputes, races… that’s where it’s a fork and rules have to settle." *The lead's line*: "an agreement whose tip names a keeper that is dead is dead. What its parties do next is a new agreement: a new first act, which may name the dead one to show lineage, and is not an update of it. A fork is for disputes and races, settled by rules. The MOR lead's wording "a dead keeper is left by a new version that every known party signs" (21:42) and the hatch of 18:51 for leaving a dead keeper by knots, read as an update, are to be read again against this; the MOR lead holds the scribe's P4 until they are." *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
+- **No rule for an exception logic covers** (27 November, 22:37–22:39). The MOR lead asked whether the hatch of 18:51 (an update every needed signer signs is pinned by their knots, whatever keeper is named) has any use left while the keeper lives, leaning to drop it: with keepers named, every update goes through them, and parties who want out sign a new agreement. He: "They didn’t skip it. They just created a new act because the previous one was a dead end no? Are you creating rules for exceptions that are covered by logic?" *The lead's line*: "the hatch is dropped. Where Terms name keepers, every update is pinned by them; where they name none, by knots. Parties who leave a keeper, dead or alive, make a new agreement, which may name the old one. The MOR lead's "an update every needed signer signs needs no keeper" (18:51), the split of the pin built on it, and the narrowing of 22:33 are withdrawn. A rule is not written for a case the other rules already settle." *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
 
 *The lead's readings of 22:45*, the note's "After his 22:36 and 22:39, for P5, 22:45", every line the lead's: it says that his two entries "withdraw the hatch of 18:51 and the readings built on it: 20:41's 2 and 3, 1's "pinned by knots" half, 21:45's 3, 22:30's 3, and the narrowing of 22:33." Its four answers: 1, "**Yes, whole.** With keepers named, the gate of every update counts only the assents every keeper shows; with no hatch it locks nothing, since leaving is a new agreement. Resting on his 22:30: "To be valid the agreement needs to be checked at the keeper."" 2, "**Yes to both.** With keepers named, knots do not show an update late (5.5.4(a)); knots still show a keeper whose record contradicts them (5.8.4, 5.5.4(c)): a knot proves after, whoever says otherwise." 3, "**No new field.** A new first act MAY name an earlier agreement; any fingerprint in any field is a knot ("Knots are knots"). Encoding 3 lists which field as an open item for the codemeister; nothing chosen." 4, "**The lead's, resting on "Protect the unknown party" (26 November):** her filling stands as the keeper showed it before it died, bound by her version for as long as its words say, recorded and checkable; nothing reaches it, the new agreement included. P5 lists it for him to check." (*Corrected* by his 23:22–23:29, "After P5" below: it stands where a held copy of the keeper's signed record shows it; with no copy held, unchecked.)
 
@@ -819,11 +885,11 @@ Every row of the settled note is the lead's reading. Those draft 26 rests on, wi
 
 **After P5** (added by P6). *His two entries*, each copied whole from the ledger by script, the MOR lead's turns and lines labelled as the ledger has them; each "Arrived at" line is the lead's, to check, and where it says more than his words, his words win.
 
-- **How many keepers are needed: the agreement and its cMIP decide** (27 November, 23:22–23:28; the scribe's P5, held for him: an unknown party's filling when the keeper dies). The MOR lead: her filling stands as the dead keeper showed it, bound by her version, nothing reaching it. He: "Ouch… tough one. And it only affects subscriptions and unclaimed vows. My question is how can the bytes prove that the keeper was alive when she signed?" The MOR lead: they cannot prove the keeper alive, but a keeper's record is signed by the keeper, so her filling in it proves the keeper placed it; not in it, it never happened for the agreement (his 22:30). He: "Provided that there is a back up copy somewhere…" The MOR lead: no copy held is "I don't know"; leaning a client duty to keep the keeper's signed record of a filling. He: "I mean… serious businesses would at least have 3 keepers with a two out of three rule no?" The MOR lead read it against "both keepers are needed" (16:44) and leaned one keeper run by a cMIP as a group. He: "Look at my words. Nothing here contradicts them. / That scenario was a two out of two, to check that none of the two cheated. / In a two out of three, you keep that, plus you add a way out if one of the three dies. / What decides if it’s two out of two or three out of two or just one. The agreement and the cMIP it uses"
+- **How many keepers are needed: the agreement and its cMIP decide** (27 November, 23:22–23:28; the scribe's P5, held for him: an unknown party's filling when the keeper dies). The MOR lead: her filling stands as the dead keeper showed it, bound by her version, nothing reaching it. He: "Ouch… tough one. And it only affects subscriptions and unclaimed vows. My question is how can the bytes prove that the keeper was alive when she signed?" The MOR lead: they cannot prove the keeper alive, but a keeper's record is signed by the keeper, so her filling in it proves the keeper placed it; not in it, it never happened for the agreement (his 22:30). He: "Provided that there is a back up copy somewhere…" The MOR lead: no copy held is "I don't know"; leaning a client duty to keep the keeper's signed record of a filling. He: "I mean… serious businesses would at least have 3 keepers with a two out of three rule no?" The MOR lead read it against "both keepers are needed" (16:44) and leaned one keeper run by a cMIP as a group. He: "Look at my words. Nothing here contradicts them. / That scenario was a two out of two, to check that none of the two cheated. / In a two out of three, you keep that, plus you add a way out if one of the three dies. / What decides if it’s two out of two or three out of two or just one. The agreement and the cMIP it uses" *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
   - *Arrived at (to check):* how many of the keepers named must show an act is the agreement's, by the cMIP it uses. With none, every keeper named is needed: two named, two needed (16:44, read as that case). Two of three keeps the check that none cheated and adds a way out when one dies. The MOR lead's reading of 16:44 as "every keeper named, always" and his lean of one keeper run as a group are withdrawn. Which socket names that cMIP is the MOR lead's to settle with the scribe, to check.
   - Then (23:29), the MOR lead asked whether a client that fills a spot should keep the keeper's signed record of it, leaning a client duty. He: "It’s not something I would specify."
   - *Arrived at (to check):* no client duty is written for it. Her filling stands where a held copy of the keeper's record shows it; with no copy held, unchecked. Who keeps a copy is left to clients and to the keepers the agreement names. The MOR lead's lean is withdrawn.
-- **The clone is the new agreement** (27 November, 23:30–23:32; the scribe's P5, held for him). The MOR lead asked whether "a clone to the agreement to a new keeper" (21:42) and "whatever they do next is a new act, a new agreement" (22:36) are the same thing: a new first act that may name the old one for lineage, not an update of it. He: "I laughed… because to me it still always the same question. And it boils down to you try real hard to think like a human, I try real hard to think like a machine."
+- **The clone is the new agreement** (27 November, 23:30–23:32; the scribe's P5, held for him). The MOR lead asked whether "a clone to the agreement to a new keeper" (21:42) and "whatever they do next is a new act, a new agreement" (22:36) are the same thing: a new first act that may name the old one for lineage, not an update of it. He: "I laughed… because to me it still always the same question. And it boils down to you try real hard to think like a human, I try real hard to think like a machine." *Withdrawn by P8 where it rests on a version, an update, lateness, a fork of Terms, a gate or a keeper's record (section 6.17).*
   - *Arrived at (to check):* yes, the same: the clone of 21:42 is the new agreement of 22:36.
 
 Read against "Two keepers named, both needed" (27 November, 16:40–16:44): "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do"; his 23:28 reads it as the two-of-two case ("That scenario was a two out of two, to check that none of the two cheated").
@@ -849,11 +915,77 @@ The socket beside the keeper list, the lead's reading of 23:33 above, is now his
 
 ---
 
+<!-- end before P8 -->
+
+### 6.17 The entries and readings of 28 November (P8)
+
+*His entries, each read whole in the ledger under its heading, his words quoted there; each "Arrived at" line the MOR lead's, to check. Then the MOR lead's readings, each the lead's, to check, with where P8 wrote it. Readings above this section that rest on what the model removes are marked "Withdrawn by P8" where they do, not deleted (the marks were placed by the scribe on every row of 6.1 to 6.16 that speaks of a version, an update, lateness, a fork of Terms, a gate, a keeper's record or an order per keeper: INFERRED, to check).*
+
+**His entries, with the rules they reach.**
+
+| Heading (time) | Rules |
+|---|---|
+| "The keeper's ordered record is a service, not the core" (08:27–08:36) | §3.4 **Keeper**, 5.8.1 to 5.8.4, 5.7.2, 5.13.3 |
+| "A buyer named as a signer is a partner" (08:37–08:38) | §3.2 **Known party**, §0 |
+| "Ending the old agreement is an act on its chain" (08:39–08:46) | 5.5.4 |
+| "A mistake is fixed by a new chain; the chain is for lineage and knots" (08:47–08:51) | §3.3 **Chain**, 5.5.1 |
+| "Nothing is updated: new acts" (08:52–08:53) | 5.5.1; the word "update" out of the text |
+| "The ending condition" (08:54–08:56) | §3.3 **Ending condition**, 5.5.2, K4 |
+| "No dissolving with open obligations to unknown parties" (08:57–08:58) | §3.2 **Two classes**, 5.5.3, 5.6.1(c) |
+| "Rely when a relay dies: a proof, not one for the bytes" (09:01–09:02) | 5.8.3, 5.10.6, 5.13.2 |
+| "The closing pointer: no longer valid, and it once existed" (09:05–09:09) | §3.3 **Closing pointer**, §4.2 `closing_pointer`, 5.5.4, 5.13.1, 5.13.2 |
+| "No versions: the chain guards the end and forces knots" (09:10–09:15) | 5.5.1, 5.8.4, §3.3 |
+| "Collectives: the dual agreement framework" (09:17–09:18) | companion, section 4.7; no rule |
+| “"As far as I can see" is the honest answer” (09:53–09:59) | §3.6, 5.5.3, 5.13.5 |
+| "A keeper is a relay: lodge, relay, fetch" (10:00–10:01) | §3.5, 5.8.1, 5.5.4 |
+| "A change of who they are: renew or exit" (10:02–10:18) | 5.5.6, §3.3 **Succession** |
+| "An act that names a clock is anchored to it" (10:19–10:20) | §3.4 **Anchoring**, 5.4.1, 5.6.4, 5.8.5, 5.8.6 |
+| "We are, we use, we offer" (13:45–13:53) | companion, section 4.7; no rule |
+| "Shares and how they move are the cMIPs'" (13:53–13:58) | §1, §3.2 **Shares**, §6 |
+| "Dubsar for cMIP frameworks" (14:05) | no rule |
+| "Not to be used bare", bigger in the prompts (14:06) | no rule; §0's warning kept as it stands |
+| "The old collective and new commitments: cMIP business" (15:28–15:30) | 5.5.3 |
+| "An agreement that acts as a party ends only with those it owes" (15:31–15:33) | 5.5.6 |
+| "Who am I to decide?" (15:35–15:36) | no rule |
+
+**The MOR lead's readings, each to check.**
+
+| Reading | Where P8 wrote it |
+|---|---|
+| "The model, after its test, 10:25" (ground for P8) | 5.5.1 to 5.5.6; 5.5.3 (as far as the acts held show, naming how many keepers) |
+| Which naming closes, 09:08: a field of its own | §4.2 `closing_pointer`, 5.5.4; its "for each known party of the old one who signs it, and for no one else" *withdrawn* by A1 |
+| A1, A2 | 5.5.4; 5.5.5 |
+| A6, A8 | 5.8.3, 5.10.6; the reading 1 of the sixth attack ("not there, it does not") *withdrawn* where the verifier holds the act signed |
+| A9 (a cost) | section 7.3 |
+| B3 | 5.7.1 |
+| B5, B12 | 5.5.3, 5.10.5, 5.1.4 |
+| B10 | 5.5.3, 5.10.8 |
+| B11 | 5.6.2 |
+| B15 | 5.5.2(f); "nothing triggers" out of P7's 5.5.7(f) and 5.10.8 |
+| B18 (the sixth attack's reading 4) | §3.2 **Known party**, 5.5.2(e) |
+| B20 | 5.5.4 |
+| B21 | §1 |
+| Answers 1, 2 | 5.5.2(e); 5.5.4 |
+| Answers 7, 9, 17 | 5.5.5 |
+| Answer 13 | 5.8.3, K9 |
+| Answer 14 | 5.8.2 |
+| Answer 16 | 5.12.4 |
+| Answer 24, as his 15:28 to 15:30 corrects it | 5.5.3; "takes no new commitments" *withdrawn* |
+| Answer 12's addition | v38, step 1.9d and the steps like it (P8's commit on that branch); no rule of draft 26 |
+| The sixth attack's readings | sixth 3: 5.7.2; 4, 16: §3.2, 5.5.2(e); 5: 5.4.5; 9: 5.8.4; 10: §3.1, 5.8.2; 11: §4.2 `keeper`; 13: 5.8.3, K9; 14: §3.2; 15: 5.5.4; 17: §1; 18: §0; 19: gone with P7's 5.5.5(d); 22: 5.2.2. *Listed where the model removes them*: 1 and 6 (by A6); 2, 8 and 12 (no keeper's record); 7 (the codemeister's answer 1 of 08:40: the Terms resolving update gone; it stands for a Statement of kind `resolve`, encoding 3, E17); 20 (by 09:08); 21 (encoding 3, section 11, item 15) |
+| P7's three of 00:20 | 1: *removed* (no keeper's record; a keeper that cannot be reached is A6's); 2: kept, the pointer "(5.8.3)" in 5.10.6; 3: *removed* ("what a keeper signed stands" rests on a keeper's record) |
+| The lead's reading of 13:58 (the guarantees) | §6, its opening |
+| The lead's reading of 10:20 | 5.8.5, 5.8.6 |
+| "valid" kept as it stands (B19 his, open) | §3.3 **Valid**, which also names the closing pointer's own words |
+
 ## 7. The stated costs
 
 **In plain words.** A stated cost is a case the grammar does not fit, said plainly: what a rule trades away, and who carries it. None is closed by a grammar rule. Draft 25 kept thirty-eight of them in its own section 7; draft 26 keeps only rules ("Only rules in the hashed text", 17 November: "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested."), so they are here, each marked as its rule went.
 
 **How to read it.** Each cost has its draft 25 title, then a mark: *kept* (its rule stayed, and draft 25's words stand, quoted unchanged, its rule numbers draft 25's); *reworded* (its rule changed, and the words are the scribe's, in draft 26's terms, saying what the cost now is and nothing more; draft 25's words stay in draft 25); *left with its rule* (its rule moved to another text, and the cost with it, quoted unchanged here for the record); *dropped* (its rule went). Then the draft 26 rules it concerns, and the ledger entry that reaches it, where one does (the outline's item 7 names them; the sort of each cost is the scribe's reading). Where a kept cost has a word that changed (place, keeper), the change is said in one line.
+
+<!-- before P8 -->
+*The costs of sections 7.1 and 7.2 as P7 left them: kept, not rewritten; quotations of draft 26 here are of draft 26 before P8 (b58e4171), and its rule numbers are that text's.*
 
 ### 7.1 Draft 25's thirty-eight
 
@@ -1039,629 +1171,352 @@ One line each. Where a line of the ledger gives the cost, it is quoted and label
 
 Draft 26's keeper costs one more thing, said by none of these: Terms that name keepers are in force only once those keepers show them, so a keeper that stops answering stops the agreement's order (5.4.1, 5.8.4). The scribe's, from 5.8.4. After his 22:36 and 22:39 (P5): an agreement whose keepers do not show its acts stays where they left it, and its parties go on only by a new agreement, a new first act (5.8.3); the old agreement's acts stay as its keepers showed them. The scribe's, from 5.8.3. After his 23:22–23:28 (P6): Terms may name, beside their keepers, a cMIP by which fewer than every keeper named must show an act, two of three say, so that one keeper falling silent need not stop the order; with none named, every keeper is needed, and the cost stands as above (5.8.3, K9). The scribe's, from 5.8.3.
 
+<!-- end before P8 -->
+
+### 7.3 The costs of the model (P8)
+
+*Each stated where his words or the MOR lead's readings state it; the scribe's wording.*
+
+- **Nothing proves that nothing came after.** Every answer of absence is "as shown", naming how many keepers it rests on (5.5.3; “"As far as I can see" is the honest answer”).
+- **The known parties are protected by their signatures alone** (the MOR lead's reading A9, to check): his 08:57 bars a dissolution while an obligation toward an unknown party is open, not one toward a known party, who is protected by the scheme they signed (5.5.3, 5.6.1(c)).
+- **The pin is by knots, keepers or not.** Each party whose assent puts Terms in force must make a later act shown after them (5.4.1): with keepers named, the keepers pinned before P8. *INFERRED* from "The keeper's ordered record is a service, not the core"; listed for the MOR lead.
+- **Renew or exit.** A counterparty of an agreement that changes who it is is asked, by its own signature (5.5.6): a toll on each change of who they are, only in their dealings with it (his 10:15).
+- **A debt outside any agreement** gives its holder no signature that stops an ending (the MOR lead's reading in "An agreement that acts as a party ends only with those it owes", to check).
+- **A signer's line starts afresh in each agreement** (5.7.1): two assents to two successors are never one fork of a line; two endings are a fork only by 5.5.5.
+
 ## 8. The scenarios
 
-**In plain words.** Each scenario is a short story told in acts, in the order they are signed, with what a verifier answers under draft 26 at each step and which rule gives it. A verifier can be run on each: the acts are the input, the answers the expected output. Where an answer turns on something draft 26 leaves out, the scenario is told up to that point and says where it stops; nothing is chosen.
+**In plain words.** Each scenario is a short story told in acts, in the order they are signed, with what a verifier answers under draft 26 as P8 left it, and which rule gives it. P8 rewrote all thirty-nine on the model of 28 November: an agreement has no versions; it lives until its ending condition is met; any change is that end and a new agreement whose Terms may carry a closing pointer; a keeper is the stated where of the agreement's acts, and gives no order. Where a scenario's people remain, it is told again as the model's case; where only the old mechanism was tested (a replacement, its gate and pin, lateness, a fork of Terms, a keeper's record), it says so, and tests what the model leaves of it. The scenarios as P7 left them are kept in section 11.7, unchanged.
 
-**How to read it.** *V1, V2, V3* are versions (Terms acts) of one agreement; *U1, U2* updates of one version; *A(x, V)* is x's assent to V; *CS(x)* x's counter signature. "Names" means a fingerprint in a field (a knot, 5.13.1). Each answer is given with its word in bold, its rule, and its qualifier (**as shown**, **per keeper**, **per clock**). Unless a scenario says otherwise: the Terms name no keeper, no clock and no update condition; the parties named as signers are the known parties (§3.2); each assent names in `previous` its signer's last act within the agreement (5.7.1); the verifier holds every act listed and every cMIP named. The names (Ana, Ben, Carla) are the ledger's. The expected answers are the scribe's reading of draft 26's rules (INFERRED, each with its rules); none is a vector, and none changes one.
-
-The scenarios are of three sources: the ledger's (8.1 to 8.7), the impact sheet's twenty-two new vectors by its line (8.8 to 8.16), and the five blind readers' cases, M4 to M8 (8.17 to 8.21). The impact sheet was written before draft 26 and covers the exchanges up to "Wave two: check, then attack, then draft 26" (26 November); each of its expected answers is re-read here against draft 26, and where draft 26's answer differs from the sheet's, both are given.
+Each scenario names, after its answers: **Runs on**, the cMIPs its answers rest on, by socket, a stand-in by the name the freeze test suite v38 gives it (`spec/03-MOR-freeze-test-suite-v38.md`, Core components, "Stand-ins", on branch `claude/freeze-suite-v38-rewrite-n7xipv`), or "a test cMIP" where v38 names none (each listed in the report, "What waits on the codemeister"); each answer that is an agreement's doing is that cMIP's, and without it **unchecked** (§6, its opening); and **Beneath**, the grammar's guarantees it tests whatever the cMIPs say: who signed, what names what, a fork, the stated where, an anchoring, the unknown party's protection (the MOR lead's reading of 13:58 in the ledger's "Shares and how they move are the cMIPs'", to check). Where a step of v38 tells the same case, it is named. *Abbreviations*: T1, T2 are Terms acts, each its own agreement; A(x, T) an assent of x to T; CS a counter signature; CP(T1) a closing pointer naming T1; R a Statement of kind `resolve`.
 
 ### 8.1 Ana, Ben and Carla: a withdrawal against the completing assent
 
-*Source*: "What a race stops" (18 November: "Ben's signature completing Terms while Carla takes back hers, with nothing ordering the two"; he: "Agreed, Carla is the monkey wrench that gets it all stuck"); "In force once pinned" (18 November); "A fork is a fork" (27 November). The ledger records that the MOR lead "retold it with Ana, Ben and Carla" in "The gate and the pin; a fork, not a race" (26 November); the retelling's own acts are not in the ledger, so the acts below are the 18 November case's.
-
-*Acts*: (1) V1, a first version: parties Ana, Ben and Carla, each named as a signer; author Ana; no `in_force`. (2) A(Ana, V1). (3) A(Carla, V1). (4) A(Ben, V1), naming none of Carla's acts. (5) CS(Carla), `terms` V1, its `previous` naming (3); it names nothing of Ben's.
-
-*Answers*:
-- After (4): the assents V1's default asks for are present (5.4.1, first sentence: every party named as a signer); V1 is not yet in force: **not shown**, no order being shown, since no party has acted after the completion (5.4.1, the pin), **as shown**.
-- After (5): with no keeper, only knots order (5.4.5, The order). (5) is not shown after (4), so it is not late. Counting every act but those shown after (5), (4) is still counted and V1 would come into force, so (5) is not shown to have come first. With every act counted, V1 would come into force. So (5) and the completion are a **fork** (5.4.5; 5.12.2: "Terms coming into force against a counter signature"): neither takes effect, V1 is not in force, and the verifier shows both and chooses neither (5.12.1).
-- *Variant*: (5) names (4) (Carla had seen Ben's assent). Then (5) is shown after the completion: it is **late**, cancels nothing, and pins for Carla (5.4.1: "a counter signature so shown is late, and cancels nothing"); V1 is in force once Ana and Ben have also acted after the completion (5.4.1), **as shown**.
-- *Variant*: V1 names a keeper K. Then K's positions settle it: (5) changes nothing where K places it after the completion, and cancels where before (5.4.5, The order), **per keeper**; V1 is in force once K shows the completing assents (5.4.1).
-
-*Stops*: how the fork of step (5) is resolved in bytes is not given: 5.12.4 gives the form of a resolving update "for a fork of a line only" (item 7, left out). Whether Carla's counter signature cancels once such a fork is resolved is "as the resolver decides" (the lead's reading of 09:47, section 6.6, item 6); draft 26 has no rule for it.
+*Acts*: (1) T1: parties Ana, Ben and Carla, each named as a signer; author Ana; no `in_force`; no keeper. (2) A(Carla, T1). (3) A(Ben, T1), naming none of Carla's acts. (4) CS(Carla), `terms` T1, its `previous` naming (2); it names nothing of Ben's.
+*Answers*: the default of 5.4.1 asks an assent in each name; Ana's is T1 itself (§4.3). Nothing orders (3) against (4): neither is shown after the other. Counting every act held but those shown after the CS, T1 would not come into force; with every act counted, it would: **fork** between the CS and T1's coming into force (5.4.5, "The order"). T1 is not in force while it stands. It is resolved only by a resolve under a power to resolve T1 gives (5.12.4); T1 gives none, so the fork stands (5.12.7). *Unchanged by the model*: 5.4.5 never rested on a replacement; its "late" is now "comes after the completion".
+*Runs on*: none: `in_force` and `powers` are empty, and the default is the grammar's (5.4.1). *Beneath*: who signed (three names, Ana's by her Terms act); what names what (no knot orders (3) and (4)); a fork.
 
 ### 8.2 Ana's month
 
-*Source*: "Ana's month ends by the clock the agreement names" (27 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November: "If she bought for a month of service to an LLM for example, the deal is valid a month.").
-
-*Acts*: (1) V1, a first version by the seller S, named as a signer and author; a role (say of kind fits, its `what` and its K5 cMIP); `in_force` (required, 5.4.2); `clock` C; a K1 cMIP whose words give a buyer one month. (2) A(S, V1), and acts that put V1 in force and pin it (5.4.1). (3) A(Ana, V1), which earns a filling by the K5 cMIP's proof. (4) V2, `replaces` V1, signed by S alone, naming clock C2 and dropping the role. (5) Acts of S that pin V2.
-
-*Answers*:
-- (3): Ana's filling is **shown**, with its proof and V1 named (5.10.2, 5.10.7), **as shown**; her assent binds her, and binds S to her, as V1 says (5.4.3).
-- (4) and (5): V2 is **valid**, by default: its only known party, S, signed (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1), **as shown**. Ana is not asked (5.5.5(a)).
-- V2 does not reach Ana's filling: for a filling no later update exists; V2 exists for the agreement (5.10.6). Her filling is still read from V1, its role and its cMIP as V1 states them, though V2 drops the role (5.10.2).
-- Whether her month still applies is the K1 cMIP's answer, on V1's clock C, never V2's C2 (5.10.8, 5.8.5; the lead's reading of 13:20, section 6.8): the verifier shows it as that cMIP's, with its ground, **per clock**; without that cMIP, **unchecked** (5.10.8).
-- *Variant*: V1 names no clock. Then no term in time can be read from V1, and a verifier shows nothing about that term (5.10.8, 5.8.6; wave five, the lead's reading C27); and where V1's K1 cMIP declares, in its own published text, that it needs a clock, V1 is **invalid**, a verifier reading the declaration from that cMIP's act, and **unchecked** where it lacks the cMIP (5.8.6; §4.4, case 8).
-
-*Stops*: which act the month counts from ("the anchoring of the purchase": the assent, the payment, the proof) is item 12, left out; the cMIP that reads the words answers it, and draft 26 names no act.
+*The old case*: S's version 2 dropped Ana's role and named another clock; her month still ran on version 1's clock. *On the model*: there is no version 2. *Acts*: (1) T1, an offer by the seller S: S named as a signer and author; a role R (sort fits, its `what`, its K5 cMIP); `in_force` (5.4.2); clock C; words giving a buyer one month. (2) Acts that put T1 in force and pin it (5.4.1); T1 anchored to C (5.8.5). (3) A(Ana, T1), earning a filling of R. (4) S signs T2, carrying CP(T1), naming clock C2 and no role.
+*Answers*: T2's pointer: T1's ending condition is empty, so the default asks every known party, S alone: **valid**, by default (5.5.2(e)); T1 is **ended** (5.5.3) and is not dissolved while Ana's month is open (5.5.3): her filling **shown**, T1 named (5.10.2, 5.10.7). How long it applies is K1's answer on T1, counted on C, per clock, never on C2 (5.8.5, 5.10.8). Once T1 is ended: R takes no new identities; a new assent to T1 counts for nothing (5.5.3). T2 reaches nothing of Ana's (5.10.6).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: words of sale`, K1, for what a month buys and whether it still applies; `stand-in: open obligation check`, for whether the obligation to her is open. *Beneath*: the unknown party's protection (no later act reaches her filling); an anchoring (her month on T1's clock); who signed (S alone meets the default). *v38*: 7.10.
 
 ### 8.3 Version 3 naming version 1
 
-*Source*: "A late version 3 is rejected" (26 November: "Version 3 is the one the network needs to reject"; the lead's line: "a version 3 that names a version already replaced is rejected once the replacing version is in force").
-
-*Acts*: (1) V1, in force and pinned, parties Ana and Ben. (2) V2, `replaces` V1; A(Ana, V2), A(Ben, V2). (3) Acts of Ana and Ben after (2), pinning V2 (5.5.1(b)). (4) V3, `replaces` V1; A(Ana, V3) and A(Ben, V3), each naming in `previous` its signer's act of (3), as in the rerun ("each maker signed version 2 and then version 3 in their own line", the lead's line).
-
-*Answers*:
-- V2: **valid**, by default (5.5.7(e)), and in force (5.5.1), **as shown**.
-- V3: it passes V1's gate (5.5.4: L passes O's gate), and no choice of assents enough for V3 to pass V1's gate avoids an act shown after acts enough for V2 to pass V1's gate (5.5.4(a), as wave five has it: lateness is read against the gate, never against V2's own pin): V3 is a **late update**, answered **late**, naming 5.5.4 and the acts that show it, **as shown** (5.5.4(c)). It replaces nothing and is no tip; which Terms are in force is answered as if V3 were not there: V2 (5.5.4(c)). An assent to V3 binds no one; nothing built on V3 counts: a late update is no tip and gives no previous (5.5.4(c)).
-- "Rejected" is not the answer: draft 26's word is **late** (§3.6; the settled note's M5). Whether "rejected" is a verifier's answer for a late update is item 24, left out.
-- *Variant*: V1 names a keeper K. Lateness is read per K, from the positions at which each passes V1's gate (5.5.4(b)), **per keeper**; knots show V3 late against K only as K's contradiction (5.5.4(c), 5.8.4).
-- *Variant*: the chain that would show V3 late needs an act named in a field and not held. Whether V3 is late is **unchecked**, and so is which Terms are in force from V1 on (5.5.4(c), 5.13.3).
-- *Variant*: nothing shows V3 after V2's acts (Ana and Ben signed V3 naming only their V1 acts). V2 and V3 are a **fork** whose shared act is V1 (5.5.4), and V1 stays in force (5.5.4(e)).
+*The old case*: a version 3 naming version 1 after version 2 replaced it, late by the makers' own lines. *On the model*: two endings of one agreement. *Acts*: (1) T1, in force and pinned, parties Ana and Ben. (2) T2, carrying CP(T1), signed by Ana and Ben. (3) Later Statements of Ana and Ben in T2, each naming T2's assents. (4) T3, carrying CP(T1); A(Ana, T3) and A(Ben, T3), each naming in `relies_on` their act of (3).
+*Answers*: T2's pointer meets T1's default (both known parties): **valid** (5.5.2(e)). T3's pointer is shown after acts enough for T2's to meet it (the knots of (4) to (3) to (2)): T2's ends T1, and T3's closes nothing (5.5.5). T3 is in force among Ana and Ben, each bound by T2 and T3 (5.5.4). No answer "late": it is no longer draft 26's (the report, "What P8 changed"). *Mechanism dropped*: lateness against the gate.
+*Runs on*: none: the default ending condition is the grammar's. *Beneath*: what names what (the knots order the two pointers); who signed. *v38*: 3.9w, 3.9ac.
 
 ### 8.4 Two keepers that disagree
 
-*Source*: "The place vouches for the chaining only" (26 November, 17:49: he, "Two disagreeing has its value though"; the lead's line: "where they disagree there is none ("not shown", with that reason), and the disagreement is kept as evidence"; "a forced deadlock like a fork", the lead's).
-
-*Acts*: (1) V1 in force, naming keepers K1 and K2, and an update condition "any two of three known parties" (Ana, Ben, Carla). (2) U1, `replaces` V1, with A(Ana, U1), A(Ben, U1). (3) U2, `replaces` V1, with A(Carla, U2) and A(Ben, U2), Ben's naming his own last act before (2): Ben's two assents name the same `previous`. (4) K1's records place (2) before (3); K2's place (3) before (2).
-
-*Answers*:
-- About the order of U1 and U2: **not shown**, for the answers that rest on it, the keepers the Terms name disagreeing on it; both keepers named and each one's records shown as evidence; answers that rest only on what they agree on stand (5.8.3, 5.5.5(d); wave five, the lead's reading C46d).
-- Ben's two assents name the same `previous`: a **fork** in Ben's line, whatever the keepers show (5.7.2). He is a known party who assents to two rival updates of one version, so neither of his assents counts for either gate until his line is resolved (5.5.5(a), 5.7.2; the lead's reading of 14:33, section 6.10). U1 then has Ana's assent and U2 Carla's: neither has two of three counted, the condition answers **not valid** for each, on the assents counted (5.5.7(c)), and neither passes the gate. V1 stays in force, **per keeper** (5.5.1, 5.5.3).
-- *Variant* without Ben's double assent: the update condition asks any one of the three, and Ben signs U1 only. U1 (Ana, Ben) and U2 (Carla) both pass V1's gate; neither is shown after the other, the keepers disagreeing, so they are a **fork** (5.5.4), shown with the keepers' disagreement; V1 stays in force (5.5.4(e)).
-- *Variant*: K1 shows U1's assents and K2 shows nothing yet. Every keeper named is needed (5.8.3, wave four): U1's order is **not shown**, per keeper, with the reason that K2 does not yet show it; V1 stays in force (5.5.1(b), 5.5.5(d)). Before wave four this was item 5, and the scenario stopped here. *Re-read by P5*: the split of the pin is withdrawn (his 22:36 and 22:39; section 6.16). Every keeper V1 names pins U1, whoever signs it, and its gate counts only the assents both keepers show (5.5.1(a), (b)): K2 shows none, so U1 is no update of V1 for now: **not shown**, per keeper, K2 named as not yet showing it (5.8.3); V1 stays in force. *As P3 left it*: the same answer, U1 being no update every known party signs. *Re-read by P6* (his 23:22–23:28): V1 names no cMIP beside its keepers, so every keeper named is needed (5.8.3); the answers above stand. With C a named condition, the gate's cMIP is asked on the assents both keepers show and its answer passed on per keeper, U1 **not shown** as in force (5.5.7(c); the lead's 23:22, 1).
-
-*Stops*: how a verifier hands a cMIP that counts signatures the assents that count, leaving out Ben's forked ones, is not said (For M11, below).
+*The old case*: K1 and K2 gave two orders for two rival updates. *On the model*: keepers give no order (5.8.4). *Acts*: (1) T1 in force, naming keepers K1 and K2, nothing beside them, and an ending condition by any two of three known parties (Ana, Ben, Carla). (2) T2 carrying CP(T1), with A(Ana, T2) and A(Ben, T2). (3) T3 carrying CP(T1), with A(Carla, T3) and A(Ben, T3); neither names the other. (4) K1 and K2 each hold (2) and (3).
+*Answers*: each pointer meets T1's condition: two endings, neither shown after the other: **fork** (5.5.5). Nothing a keeper holds orders them (5.8.4): T1 stays in force until a resolve under a power to resolve T1 gives settles it (5.12.4); T1 gives none: it stands. T2 and T3 are each in force among their own signers while the fork stands (5.5.4, 5.12.3). Where K2 does not hold (3): (3) is not at the stated where of T3 only if T3 names K2; T1's where does not decide T3's acts (5.8.2, 5.5.4).
+*Runs on*: `stand-in: ending by two of three signatures`, K4; `stand-in: fork resolver`, K3 of sort `resolves`, in the variant that names one. *Beneath*: a fork; the stated where (both keepers hold both); who signed. *v38*: 1.7a, 3.3.
 
 ### 8.5 The silent signer
 
-*Source*: "The gate and the pin; a fork, not a race" (26 November): the lead's answer to "How is this then enforced?": a malicious client can "withhold its knot (the silent signer: not shown, cured by naming a place)". Its "Not answered" line: "whether draft 26's warning says plainly that Terms naming no place depend on every needed signer's knots".
-
-*Acts*: (1) V1, a first version, Ana, Ben and Carla named as signers, no keeper. (2) A(Ana, V1), A(Ben, V1), A(Carla, V1). (3) Later acts of Ana and of Ben within the agreement, each naming its own assent and, by `answers` or `relies_on`, the other two assents. (4) Nothing more from Carla.
-
-*Answers*:
-- V1's assents are present (5.4.1, first sentence), and it is **not shown** as in force: no order is shown, since Carla, in whose name an assent is counted, has made no act shown after every one of those assents (5.4.1), **as shown**. A missing act never becomes a yes (5.13.3).
-- *Variant*: V1 names a keeper K. V1 is in force once K shows the three assents, at the positions K gives (5.4.1), **per keeper**; Carla's silence changes nothing. Where keepers are named, only they pin (5.4.1). *Wave five*: the lead's reading 2 of 20:41 (a first version every party signs pinned by their knots whatever keeper is named), written by P3 and withdrawn at 22:45 (section 6.16), changed nothing here: Carla's knot is lacking. K's answer is the one given (5.4.1).
+*Acts*: (1) T1, Ana, Ben and Carla named as signers, no keeper. (2) A(Ana, T1), A(Ben, T1), A(Carla, T1), Ana's being T1 itself. (3) Later Statements of Ana and of Ben within T1, each naming its own assent and the other two. (4) Nothing more from Carla.
+*Answers*: T1 has come into force, but the pin asks each counted name for a later act shown after every one of the assents: Carla has none: **not shown** as in force, no order shown (5.4.1). A counter signature by Carla, unordered against the completion, would be a fork (5.4.5). *Unchanged by the model*, but for one thing: with keepers named, the keepers no longer pin (5.8.4); knots always do (the report, "What needs a choice").
+*Runs on*: none. *Beneath*: what names what; who signed.
 
 ### 8.6 The stall
 
-*Source*: "A missing act stays unchecked: no door around it" (26 November; Fable 5.1's break 4, "a `previous` nobody holds"). He: "I think yes. I don’t see the need to open a door around it. But feel a risk", and "No, I meant a risk of opening a door". The lead's line: "The stall is the forced deadlock: only someone the update condition accepts can make it, the agreement resolves it as a fork, and a keeper prevents it in advance."
-
-*Acts*: (1) V1 in force, Ana and Ben, no keeper. (2) U, `replaces` V1, A(Ana, U), A(Ben, U); Ben's assent names in `previous` an act the verifier does not hold. (3) Later acts of Ana and Ben that would pin U, Ben's chain running through the act not held.
-
-*Answers*:
-- Ben's assent counts, and his line is **unchecked** before it (5.7.1). U is **valid**, by default, where both assents are held (5.5.7(e)).
-- Whether U is pinned needs a chain through the act not held: **unchecked** (5.13.3: "never a yes, and never a no. No grammar rule goes around it"), and so is which Terms are in force from V1 on, the verifier naming V1 as the last version it has established (5.5.4(c), 5.5.5(e)).
-- *Variant*: V1 names a keeper K. U is pinned once K shows its order (5.5.1(b)); the missing act stops nothing K shows, **per keeper**. *Re-read by P5*: K alone pins U, whoever signs it (5.5.1(b)); the knots through the act not held are not asked, and the answer stays **per keeper**. (As P3 left it, U, signed by every known party, was also pinned by their knots, and that way was **unchecked**: withdrawn, section 6.16.)
+*The old case*: an update pinned through an act not held. *On the model*: an ending through an act not held. *Acts*: (1) T1 in force, Ana and Ben, no keeper. (2) T2 carrying CP(T1); A(Ben, T2) names in `previous` an act the verifier does not hold. (3) A Statement of Ana's in T1 made after (2), whose order against (2) runs through the act not held.
+*Answers*: T2's pointer meets T1's default: **valid**, by default (5.5.2(e)); T1 ended. Whether (3) came before the ending needs the act not held: **unchecked** (5.13.3; 5.6.4), never a yes and never a no. Ben's line in T2 is **unchecked** before his assent (5.7.1); a signer's line starts afresh in T2, so it names nothing of T1 (5.7.1).
+*Runs on*: none. *Beneath*: what names what (a missing act stays unchecked).
 
 ### 8.7 The double assent
 
-*Source*: the lead's reading of 14:33 on item 9 (section 6.10): "a known party who assents to both rival updates forks her own line (5.7.2), and in a fork neither tip takes effect ("A fork is a fork", 27 November; draft 25's G12.2, both tips stop). Neither assent counts for either gate until her line is resolved, by a resolving act in her line as §5.12 says." It answers M7's blind reader's first point (the trace, M7's rows to check, 4).
-
-*Acts*: (1) V1 in force, known parties Ana, Ben and Carla, no keeper, an update condition C2 "any two of three" (its cMIP held). (2) U1, `replaces` V1; A(Ben, U1). (3) U2, `replaces` V1; A(Carla, U2). (4) A(Ana, U1) and A(Ana, U2), both naming in `previous` Ana's last act before them. (5) R, a Statement of kind `resolve` by Ana, `previous` that same act, `resolves` both her assents, `continues` A(Ana, U1). (6) Acts that pin U1 (5.5.1(b)).
-
-*Answers*:
-- After (4): Ana's line has two acts naming the same `previous`: a **fork** for Ana (5.7.2), **as shown**; both tips stop (5.12.3). Neither of her assents counts for either gate until her line is resolved (5.5.5(a), 5.7.2). So U1 has Ben's assent counted, U2 Carla's: C2 answers **not valid** for each, on the assents counted (5.5.7(c)), so neither passes the gate, and neither is a tip of a fork of Terms; V1 stays in force (5.5.1, 5.5.3), **as shown**.
-- After (5): R is an update of the shared act, signed by Ana, naming every tip and one in `continues`: it resolves her line (5.12.4), **shown**, naming 5.12.4 (wave five, P1-48, the lead's reading C39: "A resolving update in one signer's line that resolves is answered **shown**, naming this rule"; before, the scribe's word). A(Ana, U1) counts as the next act of her line; A(Ana, U2) is **set aside** (5.12.4). Now U1 has Ana's and Ben's assents: C2 answers **valid** for it (5.5.7(d)), named with its ground; U2 has Carla's only: **not valid** (5.5.7(c)).
-- After (6): U1 is in force once its order is shown (5.5.1(b)), **as shown**; until then **valid**, and **not shown** as in force, no order being shown.
-- *Without the ruling* (the other reading, section 6.10): each of Ana's assents would count for whether its Terms tip was signed (5.12.3's one thing), both updates would pass C2's gate, and U1 and U2 would be a **fork** of Terms (5.5.4), V1 staying in force until a resolving update of Terms.
-
-*Stops*: where Ana's second assent names her first in `previous` (no shared `previous`), 5.7.2's test sees no fork in her line, while the ruling reads every double assent as one; and how the verifier leaves her forked assents out of what C2's cMIP is given is not said. Both are listed for M11.
+*Acts*: (1) T1 in force, known parties Ana, Ben and Carla, no keeper, an ending condition by any two of three (its cMIP held). (2) T2 carrying CP(T1); A(Ben, T2). (3) T3 carrying CP(T1); A(Carla, T3). (4) A(Ana, T2) and A(Ana, T3).
+*Answers*: Ana's two assents are in two agreements, each her first act there (5.7.1): no fork of her line. Each pointer meets T1's condition (Ana and Ben; Ana and Carla), neither shown after the other: two endings, **fork** (5.5.5). *The old case changed*: the fork was of Ana's line and her resolve settled it; now her line starts afresh in each agreement (the MOR lead's reading B3), and only a resolve under a power to resolve T1 gives settles the fork of endings (5.12.4). With none, it stands.
+*Runs on*: `stand-in: ending by two of three signatures`, K4; `stand-in: fork resolver`, in a variant. *Beneath*: a fork; who signed; what names what. *v38*: 3.9ab.
 
 ### 8.8 The impact sheet's line 1: a late version 3, three vectors
 
-*Source*: the impact sheet, line 1 ("Only a lacking act that could carry a knot leaves "late" unchecked"); "A late version 3 is rejected" (26 November). The acts are 8.3's, with one more entry in V3's `relies_on`.
-
-1. *V3's `relies_on` names a Text act held beside it.* The sheet: **late**, as shown, where verifier 2 gives unchecked. Draft 26: **late**, **as shown** (5.5.4(a), (c)). The Text act is held and is a knot (5.13.1); nothing a chain needs is missing.
-2. *The same with the work declared as a piece* (a fingerprint the verifier holds as no act). The sheet: **late**, as shown. Draft 26: **late**, **as shown**, where the makers' own lines show it: the chain that shows V3 late does not run through the piece (5.5.4(a)), and "shown after" proves after whatever is missing (5.13.3). Draft 26 gives a verifier no way to be told that a fingerprint is no act (the impact sheet's Q1); no answer here turns on it.
-3. *The same with a private act held without its key in `relies_on`.* The sheet: **unchecked**, "since it could carry a knot". Draft 26: **late**, **as shown**, where the makers' own lines show it, since no act left unread can undo an "after" already shown (5.13.3); **unchecked** only where the one chain that could show it runs through the private act (5.5.4(c)). The two answers differ; listed under rows to check.
+*The old case*: three vectors on lateness. *On the model*: the same three as two endings (5.5.5). (1) T3's `relies_on` names a Text act held beside it; T3's pointer is shown after T2's by knots: T2's ends T1, T3's closes nothing (5.5.5); the Text act is a knot (5.13.1). (2) The act that orders them is named and not held: whether T3's came after is **unchecked** (5.5.5, 5.13.3). (3) Nothing orders them: **fork** (5.5.5). *Mechanism dropped*: "late" as an answer.
+*Runs on*: none. *Beneath*: what names what; a fork.
 
 ### 8.9 Line 6: a resolve with nothing to resolve, two vectors
 
-*Source*: "A resolve with nothing to resolve: "not shown", with the reason" (26 November). He: "Agreed. It’s a different reason for a “sorry can’t do” and it’s always good to state why".
-
-1. *A Statement of kind `resolve` in an unforked line*: its `resolves` names one act of the signer and no rival. **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4). It is an act of the signer's line like any other, and may itself be a tip (5.12.4).
-2. *A Terms act written as a resolving update where there is no fork* (`replaces` V1, `resolves` naming U1 and nothing rival, `continues` U1). **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4: what it names "are not the tips of a fork in its own line"). Since it names V1 in `replaces`, it is an update of V1 beside U1, and where both pass V1's gate and neither is shown after the other, the two are a **fork** (5.12.4: "a fork is not hidden by adding the field"). This answers the sheet's Q10.
+(1) A Statement of kind `resolve` in an unforked line, its `resolves` naming one act: **not shown** as a resolve, the reason: nothing to resolve (5.12.4); it is an act of the line like any other, and may itself be a tip. (2) A resolve naming two acts that are no fork (one shown after the other): the same. *Unchanged by the model*: the Terms form of a resolving update is gone; the Statement form stands.
+*Runs on*: none. *Beneath*: a fork (none is hidden by adding the field).
 
 ### 8.10 Line 7: a buyer's assent to a replaced version, two vectors
 
-*Source*: "A buyer under a replaced version: what version 2 says" (26 November). He: "What are the terms of version 2? Would be my answer".
-
-*Acts*: V2, an offer with a role, in force; A(Ana, V2), earning a filling; V3 replaces V2, pinned.
-
-1. *With the buyer's K5 cMIP held*: her assent is **shown**, as one that earned a filling under a version since replaced, V2 named (5.4.3); her filling **shown** with its proof, V2 named (5.10.2, 5.10.7).
-2. *Without it*: who fills the spot is the K5 cMIP's; the verifier lacks it: **unchecked** (§3.6, 5.10.2).
+*On the model*: a buyer's assent to an agreement since ended. *Acts*: T2, an offer with a role, in force; A(Ana, T2), earning a filling; T3 carrying CP(T2), meeting its ending condition; then A(Bea, T2). (1) *With the K5 cMIP held*: Ana's filling **shown**, T2 named, as one earned under Terms since ended (5.4.3, 5.10.2); Bea's assent counts for nothing: T2 is ended, and no new assent to its Terms counts (5.5.3); R takes no new identities (5.10.5). (2) *Without it*: Ana's filling **unchecked** (5.10.2, §3.6). A payment Bea made naming T2 is read under T2's words (5.5.3).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: words of sale`, for Bea's payment. *Beneath*: the unknown party's protection; who signed. *v38*: 2.7.
 
 ### 8.11 Line 8: protect the unknown parties, three vectors
 
-*Source*: "A buyer under a replaced version: what version 2 says" (26 November: "Protect the unknown parties."); "Who signs an update by default: the known parties" (26 November).
-
-1. *An offer with a filled role and no update condition, updated by its maker alone*: **valid**, by default: the maker is the only known party (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1).
-2. *The filler, after a later version that a named update condition let through*: she is **not shown** as bound by it: no update binds anyone through an unknown party's filling (5.6.1(c), 5.10.6); her filling stays **shown** under its own version (5.10.7).
-3. *An offer whose K5 cMIP is lacking, an outsider's assent to an update held, no update condition*: **valid**, by default, once the maker's assent is held, where verifier 2 answers unchecked: the default asks the known parties only, and who fills a role does not enter it (5.5.5(a)). The outsider's assent makes no one a party (5.5.5(a)).
+(1) *An offer with a filled role and no ending condition, ended by its maker alone*: **valid**, by default: the maker is its only known party (5.5.2(e)); the agreement is ended, not dissolved while the filling is open (5.5.3). (2) *A new agreement by the maker, carrying CP*, changing the price: binds only its signers (5.5.4, 5.6.1(c)); the holder's filling stays bound by the old Terms (5.10.6). (3) *The open-obligation cMIP not held*: the dissolution **not shown**, never a yes (5.5.3).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: open obligation check`. *Beneath*: the unknown party's protection; who signed. *v38*: 3.9f, 7.10.
 
 ### 8.12 Line 9: G10.6(b) goes, one vector
 
-*Source*: "A buyer under a replaced version: what version 2 says" (26 November), its line "G10.6(b) goes"; he: "Yes, it was a bad idea. It’s the “let me drown you in terms updatable unilaterally” nightmare we already live under".
-
-1. *A version whose update condition answers valid for a later version that changes what buyers bought*: the later version is **valid** under that condition (5.5.7(d)) and replaces once pinned, for the agreement; for the buyer's filling no later update exists (5.10.6), and the update condition is never asked about a filling (5.5.7). Her filling: **shown**, with the version it was earned under, and no later version named as changing it (5.10.7).
+*The old case*: a version's update condition answering valid for a later version that changes what buyers bought. *On the model*: an ending condition that the seller alone meets, followed by a new agreement that changes what buyers buy. The new agreement binds its signers only (5.5.4); the buyer's filling stays under the Terms its proof names, and the ending condition is never asked about a filling (5.5.2, 5.10.6): **shown**, with those Terms named, and no later act named as changing it (5.10.7).
+*Runs on*: R's K5 cMIP (a test cMIP); K4 (a test cMIP, the seller alone). *Beneath*: the unknown party's protection.
 
 ### 8.13 Line 10: her own assent on a later version, one vector
 
-*Source*: the same entry, its line "G10.6 comes back with (a) only"; "A power given binds its giver" (18 November) and the ruling on G5.6(f) (section 6.3).
-
-1. *The holder of a filling assents, in her own name, to a later version that changes what she earned*: **shown**: the verifier names, with her filling, the version it was earned under and that later version, with her assent (5.10.7). Each later version exists for the agreement; it binds her by her own assent (5.6.1(a); 5.10.6). Made for her by an agent under a power she gave in an act of her own, the same, with that power named (5.10.7, 5.6.5(f)); her own assent counts "whether or not it is counted for the later version" (5.10.7, wave five, the lead's reading F9/F10/C24). A power the version carries, given by its known parties, is not one she gave (5.6.1(b), 5.10.7; scenario 8.27).
+*On the model*: her own assent to a new agreement. The holder of a filling under T1 assents, in her own name, to T2, a new agreement by the seller that offers her another month on other terms: **shown**: the verifier names, with her filling, T1, and T2 with her assent, as a later act that changes what she earned (5.10.7). T2 binds her by her own assent (5.6.1(a)). Made for her by an agent under a power she gave in a Statement of her own, the same, with that power named (5.10.7, 5.6.1(b)).
+*Runs on*: R's K5 cMIP (a test cMIP); her power's K3 and K7 cMIPs (test cMIPs). *Beneath*: who signed; the unknown party's protection.
 
 ### 8.14 Line 16: the set of acts, five vectors
 
-*Source*: "One way to name a set of acts, in Agreements" (26 November); the settled note's M21, F12, F13 (the lead's readings). The bytes are encoding 3's, whose label and joining are open (encoding 3, section 11, items 1 and 2).
-
-1. *Two ids in either order*: one value (§4.1: "sorted").
-2. *An id given twice*: the same value as once (§4.1: "repeats dropped").
-3. *One id*: a value that is not the id itself (§4.1: "hashed with a label for a set of acts").
-4. *The empty set*: "the label and no members" (§3.1, §4.1); how its value is written is open (§7, "The empty set").
-5. *An act with a set's value in `relies_on`*: draft 26 gives no field the set form ("in this text none does", §7). A set's value and an act id are both 32 bytes, so the act passes as an Agreements act, and the entry reads as the fingerprint of an act not held; a chain that needs it is **unchecked** (5.13.3). The scenario stops there for the set: no grammar field holds a set's value, a cMIP's parameters may (the lead's reading C36/C45/F14, section 6.14; encoding 3, section 3), so the entry is read as an act id, which no act held has. The vectors of 1 to 4 wait on the label, the joining and the empty set, which the codemeister proposes and encoding 3 writes before any vector (encoding 3, section 11, items 1 and 2).
+*Unchanged by the model* (§4.1). (1) Two ids in either order: one value (§4.1: "the ids sorted, repeats dropped, and hashed with a label for a set of acts"). (2) One id twice: the same value as once. (3) The empty set: the label and no members. (4) A set's value in a field: no knot by itself (§4.1). (5) The acts it was computed from, named in a field of an act held: knots (§4.1, 5.13.1). Bytes and label: encoding 3, open.
+*Runs on*: none. *Beneath*: what names what.
 
 ### 8.15 Line 18: one gate for an update, three vectors
 
-*Source*: "Valid means in force: one gate for an update" (26 November), as "The gate and the pin; a fork, not a race" (26 November) and "Valid and in force, two words, two jobs" (26 November) changed it: the pin is back.
-
-1. *V2, valid by a named update condition, its own `in_force` answering no*: the `in_force` answer is left unread in an update, and the verifier says so (5.2.3, 5.4.2); V2 is **valid** (5.5.7(d)) and replaces once its order is shown (5.5.1); until then **valid**, and **not shown** as in force. The sheet's "it replaces" is draft 26's only with the pin.
-2. *A late update shown by knots, where the update that came first is valid and not in force by its own rule*: **late**, **as shown**, where acts enough to put the first through V1's gate are shown before it (5.5.4(a): lateness is read against the gate, never the pin, wave five); its own `in_force` is not read (5.2.3).
-3. *An update carrying its own `in_force`*: its answer on coming into force is left unread, the verifier saying so (5.2.3); where the update names a role, the field is required and read for who fills it (5.4.2). This answers the sheet's Q7 as the settled note's M11 and Q7 narrowed it (the lead's reading of 09:47, section 6.6).
+*The old case*: an update's own `in_force` left unread, valid but not in force until pinned. *On the model*: there is no update, and the case goes; what stays is an ending's one answer. (1) A closing pointer whose signatures the named ending condition answers valid: T1 **ended**; nothing more is asked of its signatures, and no power is read (5.5.2(d)). (2) The same condition answering not valid: **not valid**, the condition named with its ground; T1 goes on, and T2 is in force among its signers (5.5.2(c), 5.5.4). (3) The condition's cMIP not held: whether T1 is ended **unchecked** (5.5.2(g)). *Mechanism dropped*: the gate and pin of a replacement, and the `in_force` of an update.
+*Runs on*: K4 (`stand-in: ending by two of three signatures`). *Beneath*: who signed.
 
 ### 8.16 Line 19: the words of Terms, two vectors
 
-*Source*: "The words of Terms are a Text act" (26 November). He: "Text comes first as a rule since agreement needs to point to it".
-
-1. *Terms whose `body` names a Text act handed beside them*: the words are a Text act; nothing is found against the Terms under 5.2.2. Were the act `body` names held and not a Text act, the Terms would be **invalid** (5.2.2; §4.4, case 2); a Text act invalid under Text's own grammar rules is no Text act here; were it not held, or held and not opened, whether the Terms are invalid under 5.2.2 would be **unchecked**, with a note of what is lacking (5.2.2, wave five, the lead's readings F11 and C16/F11).
-2. *With 8.8, that Text act named also in a late update's `relies_on`*: **late**, **as shown** (5.5.4); the Text act is one more knot (5.13.1), older than every act of the case, and changes no order.
+*Unchanged by the model.* (1) Terms whose `body` names a Text act handed beside them: nothing found under 5.2.2. (2) The act not held: whether the Terms are invalid under 5.2.2 is **unchecked**, with a note naming 5.2.2 and the act lacking (5.2.2). The keepers provide the agreement's acts; the words are fetched where Text acts are, so a swap is caught (5.2.2; the MOR lead's reading 22 of the sixth attack).
+*Runs on*: K1 (a test cMIP). *Beneath*: what names what.
 
 ### 8.17 M4's blind reader: one keeper, a buyer, a late version 3
 
-*Acts* (the trace, M4's blind reader): V1 signed by two known parties, naming keeper K and no update condition, a buyer having filled a role under it; V2 signed by the two known parties only, lodged at K and shown there after V1's coming into force; V3, naming V1, shown by K later than V2.
-
-*Answers*: V2 **valid**, by default (5.5.7(e)), pinned per K (5.5.1(b), 5.5.5(d)), **per keeper**, K named. The buyer is not asked (5.5.5(a)); V2 does not reach her filling (5.10.6), which stays **shown** under V1 (5.10.7). V3 is a late update: **late**, **per keeper** (5.5.4(b), (c)). These are the blind reader's answers; draft 26, as edited, gives the same. *Re-read by P5*: K pins V2, whoever signs it, and its gate counts the assents K shows (5.5.1); V3's lateness is **per keeper** alone: with K named, knots do not show it late (5.5.4(a)). (As P3 left it, V2 was also pinned by its signers' knots, and V3 also late **as shown**: withdrawn, section 6.16.)
+*On the model*: one keeper, a buyer, two closing pointers. *Acts*: T1 signed by two known parties, naming keeper K and no ending condition, a buyer having filled a role under it; T2 carrying CP(T1), signed by the two known parties, at K; T3 carrying CP(T1), signed by them, shown by knots after T2's assents.
+*Answers*: T2's pointer ends T1 (5.5.2(e)); T3's closes nothing (5.5.5); T3 is in force among its signers (5.5.4). Where T2 is kept matters not for T1's ending: the pointer closes wherever its Terms are kept (5.5.4). The buyer's filling stands under T1 (5.10.6), T1 ended and not dissolved while it is open (5.5.3). K's holding T3 later than T2 orders nothing (5.8.4).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: open obligation check`. *Beneath*: what names what; the stated where; the unknown party's protection.
 
 ### 8.18 M5's blind reader: two keepers, a power, a month in the words
 
-*Acts*: Terms in force name two keepers and no clock; P gave A a power to sign for her; the two keepers give different orders for two acts; the words say "open for one month".
-
-*Answers*: P is bound by what A signed where P's own signature is on the version that gives the power, the version `under` names, P is a known party of that version, and its rule says yes (5.6.1(b), wave five); **unchecked** where the rule's cMIP is lacking (§3.6). About the order: **not shown** for the answers that rest on what the keepers disagree on, both named, each one's records shown as evidence; answers that rest only on what they agree on stand (5.8.3, wave five). About the month: where no cMIP the Terms name declares that it needs a clock, the time is only in the words, and the verifier gives no answer of these grammar rules about it (5.8.6); a reader's own clock gives only that reader's answer (5.8.5). Where one such cMIP declares the need, in its own published text, the Terms are **invalid**: they name a keeper and no clock, and a keeper is not a clock (5.8.6); a verifier that lacks that cMIP answers **unchecked** for 5.8.6 (wave five).
-
-*Stops*: whether A, who signed for P, is bound by that act was carried for Nobody, allegedly, and closed in wave four (scenario 8.26: not by the act, as an act of A's own); whether the two acts the keepers order differently are a fork is item 8.
+*Acts*: Terms in force name two keepers and no clock; P gave A a power to sign for her; the two keepers hold different acts for the agreement; the words say "open for one month".
+*Answers*: an act at one keeper only is not at the stated where: **not shown** as an act of the agreement, the keeper that does not hold it named (5.8.3); keepers give no order (5.8.4). The month: the Terms name no clock, so no term in time is read from them, and these grammar rules give no answer about it (5.8.6); if a cMIP they name declares it needs a clock, the Terms are **invalid** (5.8.6). A's act for P binds P as 5.6.1(b) says.
+*Runs on*: P's power's K3 (a test cMIP); K9 empty (every keeper). *Beneath*: the stated where; an anchoring (none stated, none read); who signed.
 
 ### 8.19 M6's blind reader: Ana's month, her role dropped
 
-*Acts*: Terms in force name a clock; Ana fills a role under V1, whose words give her a month; the known parties sign V2, in force, which drops her role; three weeks have passed on the clock.
-
-*Answers*: Ana's filling is **shown**, tied to its proof and to V1, with exactly V1's rights; whether it still applies is the K1 cMIP's answer, **per clock** on V1's clock, **unchecked** without that cMIP (5.10.7, 5.10.8). V2 does not reach it (5.10.6); her filling is still read from V1's role and cMIP (5.10.2). The known parties are bound to her by V1, for as long as its words say (5.4.3, 5.10.6).
-
-*Stops*: whether her spot still takes new identities once V2 has no role ("asks nothing" or unchecked) is item 29; from which act the month counts is item 12.
+*On the model*: Ana's month, her agreement ended. *Acts*: T1 names a clock and is anchored to it; Ana fills a role under T1, whose words give her a month; the known parties sign T2 carrying CP(T1), meeting its ending condition, with no role; three weeks have passed on T1's clock.
+*Answers*: T1 **ended**; not **dissolved**: Ana's obligation is open, as K1 reads her month on T1's clock (5.5.3, 5.10.8); her filling **shown**, T1 named (5.10.2). Without K1's cMIP: whether it is open **unchecked**, and the dissolution **not shown** (5.5.3).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: words of sale`, K1; `stand-in: open obligation check`. *Beneath*: the unknown party's protection; an anchoring. *v38*: 7.10.
 
 ### 8.20 M7's blind reader: two rival updates, and a resolve Statement
 
-*Acts*: V1 in force, no keeper, no update condition; U1 and U2, each naming V1, each signed by every known party, neither naming the other; a buyer filled a role under V1 before; then a Statement of kind `resolve` by one known party naming both, U1 continuing.
-
-*Answers*: as M7's blind reader read it, before the 14:33 reading: a **fork** of Terms, both tips stopped, V1 in force (5.5.4(e), 5.12.3); the resolve Statement resolves nothing (a fork of Terms is resolved only by a Terms act naming V1 in `replaces`, signed by every known party by default, 5.12.4): **not shown** as a resolving update, with the reason, and the fork stands (5.12.7); the buyer's filling **shown** under V1 (5.10.2, 5.10.6). *Under draft 26 as edited*: each known party assented to both rivals; where each one's two assents name the same `previous`, each one's line forks (5.7.2; see 8.7's stop), and neither of their assents counts for either gate until their line is resolved (5.5.5(a)): neither U1 nor U2 passes the gate, and there is **no fork of Terms**; V1 stays in force. The resolve Statement, signed by one known party, resolves that party's own line if its `previous` is the act both their assents name (5.12.4), answered **shown**, naming 5.12.4 (wave five, the lead's reading C39); the other parties' lines stay forked, and U1 still lacks their counted assents. The answer word changes from **fork** (of Terms) to **fork** (of each signer's line), and V1 is in force under both.
-
-*Stops*: the case did not give the resolve Statement's `previous`, on which whether it resolves its signer's line turns (M7's note).
+*On the model*: two endings, and a resolve under a power. *Acts*: T1 in force, no keeper, no ending condition, a power of sort `resolves` whose rule accepts a resolve one named known party signs; T2 and T3, each carrying CP(T1), each signed by every known party, neither naming the other; a buyer filled a role under T1 before; then R by the named party, within T1, under that power, naming T2's and T3's first acts in `resolves`, T2's in `continues`.
+*Answers*: before R: **fork** of endings (5.5.5). R: **shown**, naming 5.12.5, the power and its rule's answer, and the signer; the ending condition is not asked of it (5.12.5). T2's pointer ends T1; T3's is set aside and closes nothing; T3 stays in force among its signers (5.12.4, 5.5.4). The buyer's filling stands under T1 (5.10.6). *The old case changed*: a resolve by one known party in her own line no longer settles a fork of the agreement: a power to resolve does.
+*Runs on*: `stand-in: fork resolver`, K3 of sort `resolves`; R's K5 cMIP (a test cMIP). *Beneath*: a fork; who signed; the unknown party's protection. *v38*: 1.7a, 3.9.
 
 ### 8.21 M8's blind reader: a Terms act the checker reads
 
-*Acts*: a Terms act whose `body` names an act id the verifier holds, which is a Text act; whose keeper field names two keepers; with no `clock`; naming a K1 cMIP that declares it needs a clock.
-
-*Answers*: §4.4's case 2 finds nothing (the words named by fingerprint, the act held a Text act, 5.2.2). By 5.8.6 the Terms are **invalid**: they do not supply what a cMIP they name declares it needs, and a keeper is not a clock (§4.4, case 8). The cMIP declares the need in its own published text, and a verifier reads it from that act (5.8.6, wave five, the lead's reading C21/C22); the checker of encoding 3 does not give case 8 until the open choice on how it reads that act is made (encoding 3, section 9, step 7.7, and section 11, item 11, for the codemeister and for Nobody, allegedly); the grammar verifier, which holds the cMIP's act, answers **invalid** (5.8.6), and **unchecked** without it. The keeper field's two keepers are written as one sorted list (encoding 3, key 8, the lead's reading C8/C35/C34). The blind reader answered **pass** for the checker, and noted **invalid** under the open choice's first reading.
+*Acts*: a Terms act whose `body` names a Text act held; whose keeper field names two keepers; with no `clock`; naming a K1 cMIP that declares it needs a clock.
+*Answers*: **invalid**, under 5.8.6 (§4.4, case 8): a cMIP the Terms name declares it needs a clock, and the Terms supply none; a keeper is not a clock (5.8.6). The checker's reading of the declaration is open (encoding 3, section 9, step 7). *Unchanged by the model*, but for its words: "a condition in time that names no clock the Terms state".
+*Runs on*: K1 (a test cMIP declaring a clock). *Beneath*: an anchoring (refused only where no clock is stated).
 
 ### 8.22 Wave four, answer 1: two keepers, one not yet showing
 
-*Source*: "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do".
-
-*Acts*: (1) V1, a first version naming Ana and Ben as signers, keepers K1 and K2, no `in_force`. (2) A(Ana, V1), A(Ben, V1). (3) K1's records place V1 and both assents; K2's records hold none of them.
-
-*Answers*:
-- V1 in force: **not shown**, per keeper, K1 and K2 named, with the reason that K2 does not yet show the assents: they are not yet placed (5.8.3, 5.4.1, §3.4 **Placed**).
-- Once K2 also places them, its order agreeing with K1's: **in force**, per keeper (5.4.1, 5.8.4).
-- Where K2's records order them otherwise: **not shown** for the answers that rest on what they disagree on, the keepers disagree, each one's records shown (5.8.3, wave five).
-- *Re-read by P5*: 5.4.1 pins a first version that names keepers by those keepers only (P5-9); the answers above stand.
-- *Re-read by P6* (his 23:22–23:28, which reads his 16:44 as this case, "a two out of two"): V1 names no cMIP beside its keepers, so every keeper named is needed (5.8.3); the answers above stand. With a cMIP beside them that asks one of the two, V1 would be **in force**, per keeper, once K1 shows the assents, K2 named as not showing them (5.8.3, K9): scenario 8.38. (As P3 left it, Ana's and Ben's knots also pinned it, had they acted after both assents: withdrawn, scenario 8.31.)
-- *Re-read by P7* (the lead's 23:55, 3): with the keepers named, K1 is named as showing the assents and K2 as not showing them (5.8.4); the answers above stand.
-
-*The vector, for the codemeister*: acts (1), (2), (3) in order, with K1's and K2's records as the keepers' answers; rule 5.8.3; expected answer **not shown**, per keeper, reason "a keeper the Terms name does not yet show it" (§3.6).
+*Acts*: (1) T1 naming Ana and Ben as signers, keepers K1 and K2, nothing beside them, no `in_force`. (2) A(Ben, T1) and later Statements of each naming both assents. (3) K1 holds them all; K2 holds none.
+*Answers*: by default every keeper named must hold an act (5.8.3): **not shown** as acts of the agreement, K2 named as not holding them; T1 **not shown** as in force (5.4.1, 5.8.2). Where K2 cannot be reached: **unchecked**, with every act held that bears on them shown as evidence (5.8.3). *The old case changed*: no keeper's record; what K2 holds, not what it places.
+*Runs on*: K9 empty (cross verification). *Beneath*: the stated where.
 
 ### 8.23 Wave four, answer 2: Dana, added by an update
 
-*Source*: "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?", then "Yes".
-
-*Acts*: (1) V1 in force, naming Ana and Ben as signers, no update condition, no keeper. (2) V2, `replaces` V1, naming Ana, Ben and Dana as signers; A(Ana, V2), A(Ben, V2), A(Dana, V2). (3) V3, `replaces` V2, with A(Ana, V3) and A(Ben, V3) only.
-
-*Answers*:
-- V2: **valid**, by default: Ana and Ben, V1's known parties, signed it; Dana is not one of V1's known parties, and V1's gate does not ask her (5.5.5(a), 5.5.7(e)). **In force** once pinned (5.5.1). Dana is bound by V2 by her own assent (5.6.1(a)).
-- V3: Dana is a known party of V2 (§3.2 **Known party**), so V2's default asks Ana, Ben and Dana. Her assent is not held: **not shown** for V3 as a replacement, never **not valid** (5.5.5(c), 5.5.7(e)); V2 stays in force, **as shown**.
-
-*The vector, for the codemeister*: acts (1) to (3) in order; rule 5.5.5(a); expected answers **valid**, by default, for V2, and **not shown** for V3 as a replacement, reason "an assent of a known party (Dana) is not held".
+*On the model*: Dana, a party of a new agreement. *Acts*: (1) T1 in force, Ana and Ben, no ending condition, no keeper. (2) T2 carrying CP(T1), naming Ana, Ben and Dana as signers; A(Ana, T2), A(Ben, T2), A(Dana, T2). (3) T3 carrying CP(T2), with A(Ana, T3) and A(Ben, T3) only.
+*Answers*: T2's pointer meets T1's default (Ana and Ben): T1 ended (5.5.2(e)). Dana is a known party of T2 (§3.2). T3's pointer misses T2's default (Dana's signature): **not shown** as ending T2, never not valid (5.5.2(e)); T2 goes on, and T3 is in force among Ana and Ben, each bound by both (5.5.4). *The old case kept*: a party added is a known party from then on; on the model, by a new agreement.
+*Runs on*: none. *Beneath*: who signed. *v38*: 1.9b, 3.7w.
 
 ### 8.24 Wave four, answer 3: the wall of terms
 
-*Source*: ""Renewed on the terms then current" cannot be built" (27 November, 16:46–16:48). Asked whether words that renew a month "on the terms then current" are Ana's own deal or a later version reaching her, he: "How did they build such terms in agreements?", and then "Yes, it’s the scenario we trying to make difficult on the “walls of terms”". A wall of terms is words that would carry a buyer, by her one signature, into versions she never signed (the scribe's reading of his phrase).
-
-*Acts*: (1) V1, an offer: Ben as signer; a role R of sort received with its K5 cMIP; `in_force`; a clock C; words that sell a month's access "renewed on the terms then current", read by a K1 cMIP. (2) Ana fills R: A(Ana, V1), her proof naming V1. (3) V2, `replaces` V1, raising the price, signed by Ben, the known party: **in force** once pinned. (4) The month ends on C. (5) In a variant, A(Ana, V2), with a proof naming V2.
-
-*Answers*:
-- After (3): Ana's filling is governed by V1, its proof's version; no update reaches it (5.10.6), and no later version is named as changing what she earned (5.10.7). V2 is in force for the agreement.
-- After (4): whether what her filling gave still applies is the K1 cMIP's answer, shown as that cMIP's, **per clock** (5.10.8). The words "renewed on the terms then current" move nothing: these grammar rules do not read words (§5.2), and nothing changes what a filling earned but its holder's own assent (5.10.7).
-- With (5): a new filling, under V2, with its own proof and V2's rights (5.10.2, 5.10.7, 5.10.8). Without it, nothing renews her. A client may make (5) for her, which is above the core (the MOR lead's words in the exchange).
-
-*The vector, for the codemeister*: acts (1) to (4) in order, without (5); rule 5.10.7; expected answer: Ana's filling **shown**, earned under V1, with no later version named; the K1 cMIP's answer on the month passed on as its own, per clock. With (5) added: a second filling **shown**, earned under V2.
+*Acts*: (1) T1, an offer: Ben as signer; a role R of sort received, its K5 cMIP; `in_force`; a clock C; words selling a month's access "renewed on the terms then current". (2) Ana fills R: A(Ana, T1). (3) Ben signs T2 carrying CP(T1), raising the price: T1 ended (5.5.2(e)). (4) The month ends on C. (5) In a variant, Ana assents to T2, a new filling under T2.
+*Answers*: Ana's month is read under T1 on C (5.10.8); nothing of T2 reaches her (5.10.6); the words "renewed on the terms then current" are read by K1, and the grammar acts on nothing from them. In (5), her new filling is under T2, by her own assent (5.10.7). T1 is dissolved once her month is delivered (5.5.3).
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: words of sale`, K1; `stand-in: open obligation check`. *Beneath*: the unknown party's protection; an anchoring.
 
 ### 8.25 Wave four, answer 4: Terms that leave out their signer
 
-*Source*: "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later". The lead's line, corrected in the ledger: "an author whether or not `authors` lists them, so `authors` names the other authors, and such Terms are valid"; the lead's reading of 18:41 (section 6.15).
-
-*Acts*: (1) Carla signs a Terms act V1 naming Ana, Ben and Carla as signers, whose `authors` name Ana and Ben only. (2) In a variant, V1's `authors` name Carla and Ana, and A(Ana, V1) follows, naming V1.
-
-*Answers* (corrected in wave five):
-- (1): case 5 finds nothing: Carla is the first author, though `authors` leaves her out, and "No Terms are invalid for leaving their signer out of `authors`" (5.3.1, P1-16); she is a party named as a signer. Ana and Ben, the other authors, sign by assents of their own (5.3.1). Encoding 3's checker answers **pass** from the one act (E13; section 9, step 7.4). Before wave five this was **invalid**, on the lead's first line (section 6.15).
-- (2): case 5 finds nothing; the Terms come into force as 5.4.1 says, once Ben's assent too is held and pinned.
-- In both, Carla's own assent, counted by 5.4.1's default, is her Terms act: "The act that publishes Terms is its signer's assent to them" (§4.3, **An author's first act**, P3-4, on his answer of 20:50, "Publishing the Terms is the publisher's assent"); she does not sign again (scenario 8.33). And Carla is a party named as a signer, so the act is not invalid under 5.3.1's sentence on a signer who is no party (P3-26; scenario 8.35).
-
-*The vector, for the codemeister*: one Terms act, its outside naming Carla, `parties` naming Ana, Ben and Carla as signers, `authors` holding the positions of Ana and Ben; rule 5.3.1 (E13); expected answer **pass**, no case of invalid: the vector N1 named (expected **invalid**) is withdrawn. Its pair, a signer who is no party, is scenario 8.35.
+*Unchanged by the model.* *Acts*: (1) Carla signs T1 naming Ana, Ben and Carla as signers, `authors` Ana and Ben. (2) In a variant, `authors` Carla and Ana, and A(Ana, T1) follows.
+*Answers*: (1) case 5 finds nothing: "No Terms are invalid for leaving their signer out of `authors`" (5.3.1); Carla's Terms act is her assent (§4.3). (2) Likewise; T1 comes into force as 5.4.1 says once Ben's assent is held and pinned.
+*Runs on*: none. *Beneath*: who signed.
 
 ### 8.26 Wave four, answer 5: Ben signs for Ana
 
-*Source*: "The giver bears it, not the agent" (27 November, 16:50–16:53). He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality."
-
-*Acts*: (1) P, Terms in force signed by Ana and Ben, giving a power of sort `assent` whose rule says yes to Ben signing for Ana. (2) V1, a first version naming Ana and Carla as signers. (3) Ben signs an assent to V1, its `for` naming Ana and its `under` naming P. (4) A(Carla, V1). Both assents pinned by knots (5.4.1).
-
-*Answers*:
-- V1: **in force**, Ana's assent counted by Ben's act (5.4.1, 5.6.1(b)). Ana is bound by V1: **shown** (5.6.1(b)).
-- Ben is not bound by V1 by that act: it is not made in his own name (5.6.1(a), 5.6.3), and he is no party of V1: **not shown**, with that reason.
-- *Variant*: the giver is an agreement X, Ben signing `for` X under Terms of X: X is bound, as X's Terms say; Ben is not bound by the act as his own (5.6.3, 5.1.2). His duties toward the giver are the power's cMIP's (section 5, §5.6).
-
-*The vector, for the codemeister*: acts (1) to (4) in order; rule 5.6.3; expected answers **shown** for Ana as bound by V1, and **not shown** for Ben, reason "made for another under a power".
-
-*Re-read in wave five*: 5.6.1(b) now asks that Ana's signature be on "the version `under` names", P, and that she be "a known party of that version": she is, a signer P names, so the answers stand. 5.6.3's new sentence ("A power a version carries is given by that version's known parties, and binds only them") reads P's power as given by Ana and Ben.
-
-Added by N1: scenarios 8.22 to 8.26, one for each of the five answers, each naming one vector for the codemeister; and the variant of 8.4.
-
-COUNTED (`scen10.py`, M10's scratch script): 21 scenarios (7 from the ledger, 9 from the impact sheet's lines, 5 from the blind readers), holding the impact sheet's 22 new vectors (line 1: 3; line 6: 2; line 7: 2; line 8: 3; line 9: 1; line 10: 1; line 16: 5; line 18: 3; line 19: 2), 34 cases in all (7, 22 and 5), variants not counted.
-
+*Acts*: (1) P, Terms in force signed by Ana and Ben, a power of sort `assent` whose rule says yes to Ben signing for Ana. (2) T1 naming Ana and Carla as signers. (3) Ben's assent to T1, `for` Ana, `under` P. (4) A(Carla, T1). Both pinned by knots (5.4.1).
+*Answers*: Ben's assent is Ana's signing (5.6.1(b), 5.6.2); T1 in force once pinned (5.4.1). In a variant, T1 carries CP(T0), an earlier agreement of Ana's and Carla's: Ben's assent signs that pointer for Ana, and counts toward T0's ending condition, unless P's rule says otherwise (5.6.2; the MOR lead's reading B11).
+*Runs on*: P's K3 (a test cMIP). *Beneath*: who signed. *v38*: 1.10.
 
 ### 8.27 Wave five, decision 1: the seller's power over Ana
 
-*Source*: "A filling gives no power" (27 November, 18:39–18:47; Fable 5.1's fifth attack, break 1). He: "Unknown party, different rule, what do you think? The rule used is meant for known parties"; corrected (18:46): "“that fills an unknown party spot”". The lead's sentence for draft 26 (section 5, "Wave five").
-
-*Acts*: (1) V1, an offer by the seller S: S named as a signer and author; a role R (sort received, its `what`, its K5 cMIP); `in_force`; and in `powers` an entry of sort `assent` whose rule (K3) says yes to S signing an assent `for` any holder of a filling of R. No keeper. (2) A(S, V1), and an act of S shown after it: V1 in force and pinned (5.4.1). (3) A(Ana, V1), which earns a filling of R by the K5 cMIP's proof, naming V1. (4) V3, `replaces` V1, signed by S alone, cutting what R's holders get; A(S, V3), in S's own name, naming in `relies_on` the acts that put V1 in force; then an act of S naming A(S, V3), which pins V3. (5) S signs a Statement of kind `assent`, `terms` V3, `for` Ana (`[0, Ana]`), `under` V1.
-
-*Answers*:
-- (3): Ana's filling **shown**, with its proof and V1 named (5.10.2, 5.10.7), **as shown**. She is an unknown party: she takes part through a role (§3.2, **Unknown party**).
-- (4): V3 **valid**, by default: S is V1's one known party (5.5.5(a), 5.5.7(e)); V1 names no keeper, so S's knots pin it (5.5.1(b)): **in force**, **as shown**, for the agreement. It does not reach Ana's filling (5.10.6).
-- (5): **not shown** as binding Ana, naming 5.6.1(b). Its `under` names V1, which V3 has replaced, so 5.6.1(b)'s "which were in force when the act was made" already fails, and 5.6.4 reads an act made after the replacement as not binding; the scenario's point stands without that: her assent is counted in her name on V1, the version `under` names, but she is no known party of V1, and "an assent that fills an unknown party's spot gives no power"; she gave no power "in an act of her own" (5.6.1(b), 5.10.7). It is not counted as her signature on V3, and the verifier names no later version with her filling (5.10.7). It stands as S's act in S's own line (5.7.1). By 5.6.3 it does not bind S as an act of S's own. 5.6.3 calls the one it binds "the grantor (5.6.6), who gave the power", and 5.6.6 calls the grantor "the one in whose name it was made", Ana; here the two senses come apart, the power being given by V1's known party, S (listed in the report, P3).
-- Before wave five, as Fable read it: (5) **shown** as Ana's assent to V3, by "a power they gave" (5.10.7 as N1 left it), and V3 named as changing what her filling earned.
-
-*The vector, for the codemeister*: acts (1) to (5) in order; rules 5.6.1(b), 5.10.7; expected: (5) **not shown** as Ana's signature, reason "an assent that fills an unknown party's spot gives no power"; Ana's filling **shown**, earned under V1, no later version named. (P1's "For P2", vector (a).)
+*Acts*: (1) T1, an offer by S: S a signer and author; a role R (sort received, its K5 cMIP); `in_force`; a power of sort `assent` whose rule says yes to S signing for any holder of R. No keeper. (2) T1 in force and pinned. (3) A(Ana, T1), earning a filling of R. (4) S signs an assent for Ana, `under` T1, to T2, a new agreement.
+*Answers*: the power is given by T1's known parties and binds only them; an assent that fills an unknown party's spot gives no power (5.6.1(b), 5.10.7): S's assent for Ana binds her in nothing, **not shown** as hers. *Unchanged by the model*.
+*Runs on*: the power's K3 (a test cMIP); R's K5 cMIP (a test cMIP). *Beneath*: the unknown party's protection; who signed.
 
 ### 8.28 Wave five, decision 3, read again after his 22:36: a dead keeper, then a new agreement
 
-*Source*: "A dead keeper: an update every needed signer signs needs no keeper" (27 November, 18:44–18:51). He: "A dead keeper forces a new version of the agreement, no?"; "The agreement needs the keeper to run. Does it need the keeper for an update with new signatures?"; "Sounds good".
-
-*Read again* (P5) on "A dead keeper: two of three cannot leave it" (21:29–21:42); "An update the keeper never showed is no update" (22:27–22:30), he: "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper."; "A dead keeper: the agreement is dead; what follows is a new act" (22:36), he: "So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage, but the truth is, every single time, it’s a new act."; and "No rule for an exception logic covers" (22:37–22:39). The lead's readings of 22:45 (section 6.16).
-
-*Acts*: (1) V1 in force, a first version naming Ana, Ben and Carla as signers, keeper K, a role R with its K5 cMIP and `in_force` (5.4.2), and an update condition C whose cMIP accepts an update any two of the three sign (its cMIP held); V1 and its assents placed by K. (2) Dana, an unknown party, fills R: A(Dana, V1), her proof naming V1, placed by K. (3) V2, `replaces` V1, signed by Ana (her Terms act, her assent, §4.3); A(Ben, V2), naming V2. (4) W1, a Terms act with no `replaces`, signed by Ana, naming Ana, Ben and Carla as signers and keeper K′, and naming V1's root in one of its fields (which field is open: encoding 3, section 11); A(Ben, W1), A(Carla, W1); K′ places W1 and both assents.
-
-*Answers*:
-- *K alive*: K places (3). C answers **valid**, per keeper, on the assents K shows (5.5.1(a), 5.5.7(c), (d)); K pins V2 (5.5.1(b)): V2 **in force**, **per keeper**, K named (5.5.3). Carla's assent is not asked ("Carla’s signature cannot stop it", his 21:42).
-- *K falls silent before it shows (3)*: the gate counts only the assents K shows, and K shows none of V2's (5.5.1(a)): V2 is no update of V1. C's cMIP is asked on the assents K shows, none, and its answer is passed on, per keeper (5.5.7(c); P6, the lead's 23:22, 1): for C, which accepts two of the three, **not valid**, per keeper, with the ground it gives; V2 **not shown** as in force, with the reason that a keeper the Terms name does not yet show it (§3.6, 5.8.3). *As P5 left it*: **not shown** as a replacement, the cMIP's answer not said; V2 competes with nothing and makes no **fork** (5.5.1(a), 5.5.4, 5.12.2). V1 stays where K left it, the last version K showed, **per keeper** (5.5.3, 5.8.3): no act gets past K as an update, and no answer says that the agreement ended (5.5.6).
-- *All three sign W1*: W1 has no `replaces`: it is the first version of a new agreement, whose root is W1 (§3.1 **Agreement**). It comes into force when its three assents are present, W1 itself being Ana's (5.4.1, §4.3), and is in force once K′ shows them: **in force**, **per keeper**, K′ named (5.4.1, 5.8.4). It is no update of V1 and no fork with V1 or V2 (5.8.3, §5.12); its naming V1's root is a knot (§3.4, 5.13.1), which shows lineage and orders nothing in K's place (5.8.4). W1 is his 21:42's "clone to the agreement to a new keeper", read as the new agreement of 22:36 by his 23:30–23:32 ("The clone is the new agreement"; the ledger's line, to check).
-- *The old agreement's acts*, Dana's filling among them, once K no longer shows them (P6, his 23:22–23:29): where the verifier holds a copy of K's signed record showing her filling, it stands: **shown**, with its proof and V1 named (5.10.2), bound by V1 for as long as its words say; where it holds no copy, whether it stands is **unchecked** (5.10.6, §3.6). Nothing reaches it, W1 included (5.10.6). No client is bound to keep a copy (his 23:29: "It’s not something I would specify."). *As P5 left it*: "as K showed them", her filling **shown** (the lead's 22:45, 4, corrected by his 23:22–23:29). *Re-read by P7* (the lead's 23:55, 1 and 2): a held copy of K's signed record counts for every answer about order, V1 as the last version K showed included (5.8.4); with none held, K's record not held is **unchecked** (§3.6 **Unchecked**); the answers above stand.
-- *As P3 left it*: the main case had two known parties and V2 signed by both, pinned by their knots whatever keeper V1 named, **in force**, **as shown**; the variant with "any one of two" was **not shown**, per keeper, the way out "a new version, naming a new keeper, that Ana and Ben both sign". Withdrawn with the split of the pin (his 22:36 and 22:39): an update every known party signs, while K shows nothing, is **not shown**, per keeper, as V2 above, and the way out is W1, a new agreement.
-
-*The vector, for the codemeister* (none written): (a) acts (1) to (3), K placing them: V2 **valid** by C, **in force**, per keeper; (b) acts (1) to (3), K showing nothing after (2): C **not valid**, per keeper, on no assent shown; V2 **not shown** as in force, per keeper, reason "a keeper the Terms name does not yet show it", no fork; V1 the last version, per keeper; (c) with (4): W1 **in force**, per keeper, K′ named, no fork with V1 or V2; (d) K silent: with a copy of K's signed record held, Dana's filling **shown**, V1 named; with none, **unchecked** (P6). Rules 5.5.1, 5.8.3, 5.4.1, 5.10.6. Which field of W1 names V1 waits on encoding 3's open item; to be written once it is chosen. (P1's "For P2", vector (b), on the new ground.)
+*Acts*: (1) T1 in force, naming Ana, Ben and Carla as signers, keeper K, a role R, and an ending condition any two of the three meet. (2) Dana, an unknown party, fills R under T1, at K. (3) K dies. (4) Ana, Ben and Carla sign T2, carrying CP(T1), kept at keeper K′.
+*Answers*: T2's pointer meets T1's condition, wherever T2 is kept: the where T1 states is not asked for it (5.5.4): T1 **ended**. Dana's filling: K cannot be reached: whether it stands is **unchecked**, every act held that bears on it shown as evidence (5.10.6, 5.8.3); it stays bound by T1 for as long as its words say. Without the pointer, T2 is a new agreement beside T1, which goes on (5.5.4). *The old case changed*: the old agreement no longer "stays where its keepers left it"; the pointer closes it.
+*Runs on*: `stand-in: ending by two of three signatures`, K4; R's K5 cMIP (a test cMIP). *Beneath*: the stated where; who signed; the unknown party's protection. *v38*: 1.1, 1.10.
 
 ### 8.29 Wave five, decisions 1 and 2: a known party fills its own spot
 
-*Source*: "A filling gives no power", his correction (18:46): "“that fills an unknown party spot”", the lead's line: "A spot a known party fills is a known party's act, and the known parties' rule applies to it"; and (18:47): "It’s seems important to really make a point that these two are not the same class or IDs and are not bound by the same rules."
-
-*Acts*: (1) V1, an offer by S, named as a signer and author; a role R (sort received, its K5 cMIP); `in_force`. (2) A(S, V1), pinned: V1 in force. (3) S assents again to V1, naming A(S, V1) in `previous` (no fork of S's line), in a way R's K5 cMIP reads as a proof: S's filling of R, its proof naming V1.
-
-*Answers*:
-- (3): the filling **shown**, with its proof and V1 named (5.10.2). Its holder S is a known party of V1 (§3.2, **Known party**): "A spot that a known party of the version naming it fills is filled by a known party's act: that filling is no unknown party's, the known parties' rules apply to it, and an update reaches it as it reaches that party" (§3.2, **Unknown party**; its last clause P5's, on the lead's answer 1 of 22:30). S's filling is read under the known parties' rules, not as an unknown party's (§3.2). No rule asks a verifier to label a filling's holder known or unknown; this answer is the scribe's reading of §3.2. 5.5.5(a) and 5.5.7(e) say the default signers are "never a signer who fills a role": read as "filling a role does not make a signer known", S stays a known party, named as a signer; read as excluding any signer who fills one, S would stop being a default signer. Draft 26's words do not choose (For P3).
-- What the known parties' rules do to that filling under a later version is scenario 8.36: 5.10.6, 5.4.3, 5.6.1(c) and 5.6.2 now speak of "an unknown party's filling", and 5.10.7 of "a filling" (the P1 trace, For Nobody, 2).
-
-*The vector, for the codemeister*: acts (1) to (3); rule §3.2 **Unknown party**; expected: the filling **shown**, read under the known parties' rules, its holder a known party of V1 as V1 names it. Grammar case 74 is kept, renamed (the lead's reading F17/C10); case 64 is retired (C9). (P1's "For P2", vector (c).)
+*Acts*: (1) T1, an offer by S, a signer and author; a role R; `in_force`. (2) T1 in force. (3) S assents again to T1, naming A(S, T1) in `previous`, in a way R's K5 cMIP reads as a proof.
+*Answers*: S's filling is a known party's act (§3.2): no unknown party's; S stays a known party and among the default signers of an ending (5.5.2(e); the MOR lead's reading 4 of the sixth attack). *Unchanged by the model*.
+*Runs on*: R's K5 cMIP (a test cMIP). *Beneath*: who signed.
 
 ### 8.30 The lead's reading 1: which signers an update needs, under a named condition
 
-*Source*: the lead's reading 1 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`; section 6.16): "The signers an update "needs" are those the condition's cMIP requires (K2's output); lacking one, by default, the known parties. "Each shown after" means every needed signer's act is shown after every needed assent." The scribe's question 2 (the P1 trace, For Nobody, 3).
-
-*Acts*: (1) V1 in force, naming Ana, Ben and Carla as signers, keeper K, and an update condition C whose cMIP requires the assents of Ana and Ben (Carla's not asked). (2) V2, `replaces` V1; A(Ana, V2); A(Ben, V2). (3) A later act of Ana's and one of Ben's within the agreement, each naming both assents. (4) K shows nothing of (2) or (3).
-
-*Answers*:
-- C's cMIP requires Ana's and Ben's assents, and both are held (5.5.5); whether they count is the keeper's (below).
-- Draft 26 now (P5-11, P5-12; his 22:30 and 22:39, the lead's 22:45, 1): V1 names K, and the gate counts only the assents K shows (5.5.1(a)). K shows none, so V2 is no update of V1 while K does not show it; C's cMIP is asked on the assents K shows, none, and its answer passed on, per keeper: **not valid**, per keeper, with the ground it gives, and V2 **not shown** as in force, K named as not yet showing it (5.5.7(c), §3.6, 5.8.3; P6, the lead's 23:22, 1); no fork. *As P5 left it*: **not shown** as a replacement, the cMIP's answer not said. Once K shows both assents, C answers **valid** and K pins V2: **in force**, per keeper, Carla's assent not asked (5.5.1). If K never shows them, V1 stays where K left it, and the parties go on by a new agreement (5.8.3; scenario 8.28).
-- *As P3 left it* (P3-7, P3-9, his 21:42): V2 **valid**, by C, and **not shown** as in force, per keeper, Carla not having signed it, so that the knots did not pin it. *Before P3*: on the lead's reading 1 as first written at 20:41, V2 was pinned by Ana's and Ben's knots, **in force**, **as shown**. The reading's "K2's output" was the lead's error, K4 meant (21:45, answer 1).
-
-*The vector, for the codemeister*: acts (1) to (4); rules 5.5.1(a), 5.5.1(b), 5.5.5, 5.5.7; expected C **not valid**, per keeper, and V2 **not shown** as in force, per keeper, K named, no fork (P6); with K's records showing both assents, **valid** by C and **in force**, per keeper. To be written now.
+*On the model*: which signers an ending needs. *Acts*: (1) T1 in force, Ana, Ben and Carla, keeper K, an ending condition whose cMIP requires the signatures of Ana and Ben. (2) T2 carrying CP(T1); A(Ana, T2), A(Ben, T2), at T2's own keeper. (3) K holds nothing of T2.
+*Answers*: the condition's cMIP answers **valid** on Ana's and Ben's signatures (5.5.2(d)); Carla is bound by that ending as the scheme she agreed to says, and by nothing in T2 (5.6.1(c)). K's not holding T2 changes nothing: the pointer is an act of T2, at T2's where (5.5.4, 5.8.2). *The old case changed*: the old update needed T1's keeper to show it.
+*Runs on*: K4 (a test cMIP: Ana and Ben). *Beneath*: who signed; the stated where.
 
 ### 8.31 The lead's reading 2: a first version every party signs, keepers named
 
-*Source*: the lead's reading 2 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A first version that every party signs is pinned by their knots, whatever keeper is named." The scribe's question 1 (For Nobody, 4).
-
-*Acts*: (1) V1, a first version naming Ana and Ben as signers, keepers K1 and K2, no `in_force`. (2) A(Ana, V1), A(Ben, V1). (3) A Statement of Ana's and one of Ben's within the agreement, each naming both assents. (4) K1 places (1) to (3); K2 shows nothing.
-
-*Answers*:
-- Draft 26 now (5.4.1, P5-9, P6-7: "Where it names keepers, they show it, as many of them as 5.8.3 asks, at the positions they give those assents, and an act they do not yet show is not yet placed (§3.4)"; V1 names no cMIP beside its keepers, so both are needed): K2 shows nothing, so V1 is **not shown** as in force, per keeper, K2 named as not yet showing the assents (5.8.3); (3) pins nothing in the keepers' place (5.8.4). The reading is withdrawn (the lead's note, 22:45; section 6.16).
-- *As P3 left it* (5.4.1, P3-17, on the reading): V1 **in force**, **as shown**, K2's silence notwithstanding. *Before P3*: as now, per keeper, K2 named.
-
-*The vector, for the codemeister*: acts (1) to (4); rule 5.4.1; expected **not shown** as in force, per keeper, K2 named. To be written now.
+*Acts*: (1) T1 naming Ana and Ben, keepers K1 and K2, no `in_force`. (2) A(Ben, T1). (3) A Statement of Ana's and one of Ben's in T1, each naming both assents. (4) K1 holds (1) to (3); K2 holds nothing.
+*Answers*: every keeper named must hold each act (5.8.3): **not shown** as acts of the agreement, K2 named; T1 **not shown** as in force. With a cMIP in K9 that asks one of two: the pin by knots of (3) shows the order, and T1 is **in force** (5.4.1, 5.8.3).
+*Runs on*: K9 empty; in the variant, a test cMIP (one of two). *Beneath*: the stated where; what names what.
 
 ### 8.32 The lead's reading 3: lateness by knots, with a keeper named
 
-*Source*: the lead's reading 3 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "With keepers named, knots alone still show lateness; a keeper vouches for the chaining only." The scribe's question 3 (For Nobody, 5).
-
-*Acts*: (1) O = V1 in force, naming Ana and Ben as signers and keeper K. (2) F = V2, `replaces` V1, A(Ana, V2), A(Ben, V2), and a later act of each naming both assents. (3) L = V3, `replaces` V1; A(Ana, V3) and A(Ben, V3), each naming in `previous` its signer's act of (2). (4) K is silent from (1) on.
-
-*Answers*:
-- K is silent from (1) on: it shows none of F's or L's acts. With O naming K, the gate counts only the assents K shows (5.5.1(a)): neither F nor L is an update of O while K does not show them, neither is late, and they make no fork; O stays where K left it, **per keeper** (5.8.3). With K named, knots do not show L late (5.5.4(a), P5-16), and do not pin F (5.5.1(b), P5-12).
-- *Variant*: K places F's acts, then L's: F **valid**, by default, and **in force**, per keeper; L **late**, per keeper, naming 5.5.4 and the positions K gives (5.5.4(b), (c)).
-- *Variant*: K places L's assents before F's, while A(Ana, V3) names Ana's act of (2): K's record contradicts a knot the verifier holds: **not shown** for the answers that rest on that record, with the reason that the keeper contradicts the acts, the record kept as evidence (5.5.4(c), 5.8.4).
-- *As P3 left it* (5.5.4(a), P3-19, P3-20: "Whether or not O names keepers, L is shown after O was replaced, by knots"; "Where O names keepers, knots still show L late: a keeper vouches for the chaining only"): F pinned by its signers' knots, **as shown**; L **late**, **as shown**. *Before P3* (5.5.4(a): "Where O names keepers, knots show L late only as a named keeper's contradiction"): nothing showed L late, and L and F were a **fork** whose shared act is O. The reading is withdrawn (the lead's 22:45, 2; section 6.16).
-
-*The vector, for the codemeister*: acts (1) to (4); rules 5.5.1(a), 5.5.4, 5.8.3; expected, as told: neither F nor L an update of O, no fork, O the last version, per keeper; the variants: F **in force** and L **late**, per keeper; and **not shown**, the keeper contradicting the acts. To be written now.
+*On the model*: two endings by knots, with a keeper named. *Acts*: (1) T1 in force, Ana and Ben, keeper K. (2) T2 carrying CP(T1), A(Ben, T2), later acts naming both. (3) T3 carrying CP(T1); A(Ana, T3) and A(Ben, T3) naming their acts of (2) in `relies_on`. (4) K is silent from (1) on.
+*Answers*: the knots show T3's pointer after T2's: T2's ends T1, T3's closes nothing (5.5.5). K's silence orders nothing (5.8.4) and does not stop either pointer, which are acts of T2 and T3 (5.5.4). *The old case changed*: knots now order where keepers are named too.
+*Runs on*: none. *Beneath*: what names what; the stated where.
 
 ### 8.33 The lead's reading 4, his since 20:50: the author's Terms act is her assent
 
-*Source*: the lead's reading 4 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "Fable 1.1: the Terms act is its signer's assent; the other parties assent later, each in an act of their own." The note marks it for Nobody, allegedly, to see; he has: "Publishing the Terms is the publisher's assent" (27 November, 20:49–20:50). He: "What is number 4?"; then "Yes, I don’t see the need to have her sign twice". The scribe's question 4 (For Nobody, 6).
-
-*Acts*: (1) Ana signs V1, a first version naming Ana and Ben as signers, Ana its author, no `in_force`, no keeper. (2) A(Ben, V1), naming V1 in `relies_on` (or nothing more: an assent's `terms` names V1). (3) A Statement of Ana's within the agreement naming A(Ben, V1); a later Statement of Ben's naming that act of Ana's. No other assent of Ana's.
-
-*Answers*:
-- Draft 26 now (§4.3, **An author's first act**, P3-4: "The act that publishes Terms is its signer's assent to them"; 5.4.1, P3-5: "the Terms act itself being its signer's (§4.3)"): V1 is Ana's assent; with Ben's, the assents V1's default asks are present, and each party has an act shown after both: V1 **in force**, **as shown** (5.4.1).
-- *Before P3*, an assent being a Statement apart: **not shown** as in force, no assent in Ana's name being held (Fable's answer, and P1's stranger's).
-
-*The vector, for the codemeister*: acts (1) to (3); rule 5.4.1; expected **in force**, **as shown**. To be written now.
+*Unchanged by the model.* *Acts*: (1) Ana signs T1 naming Ana and Ben, no `in_force`, no keeper. (2) A(Ben, T1). (3) A Statement of Ana's naming A(Ben, T1); a later Statement of Ben's naming Ana's. *Answers*: Ana's assent is T1 itself (§4.3); T1 **in force**, pinned by (3) (5.4.1). Ana's next act names T1 in `previous` (§4.3).
+*Runs on*: none. *Beneath*: who signed; what names what.
 
 ### 8.34 The lead's reading 5: a holder's Statement giving a power
 
-*Source*: the lead's reading 5 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): ""In an act of her own" means a Statement in her own name, naming the grantee and the power's sort; K3 reads it." It rests on "A filling gives no power" and "The giver bears it, not the agent" (he: "No, Ana took the risk, she bears the responsability."). The scribe's question 6 (For Nobody, 8).
-
-*Acts*: (1) V1, an offer by S, with a role R and, in `powers`, an entry of sort `assent` whose rule (K3) says yes to S signing an assent `for` a holder of R where that holder has made a Statement in her own name naming S as grantee and the sort `assent`. (2) Ana fills R: A(Ana, V1), her proof naming V1. (3) Ana signs, in her own name (no `for`, no `under`), a Statement within V1 of a K7 kind G whose `content` names S and the sort `assent`. (4) V3, `replaces` V1, signed by S; V1 names S and T as signers, so V3 asks T's assent too. (5) S's Statement of kind `assent`, `terms` V3, `for` Ana, `under` V1. (6) A(T, V3), naming (5) in `relies_on`, and the acts that pin V3: (5) is shown before acts enough for V3 to pass V1's gate and pin (5.6.4). *Changed by P3*: P2's V3, signed by S alone and pinned before (5), left V1 replaced when (5) was made; V1 now names T as well, so that (5) is made while V1 is in force (INFERRED).
-
-*Answers*:
-- Draft 26 now (5.6.1(b), P3-22: "or, for a filling's holder, they gave that power in an act of their own: a Statement in their own name, of a kind a K7 cMIP gives (these grammar rules name no kind for it), that names the one the power is given to and the power's sort, and that the power's rule reads through that cMIP (K3)"): (3) is Ana's act of her own, and the power's rule reads it through G's cMIP; V1 was in force when (5) was made (5.6.4): (5) counts as Ana's signature on V3 (5.6.1(b), 5.10.7); the verifier names V3 with her filling as a later version that changes what it earned, with (5) and the power named (5.10.7). Without (3): **not shown**, as scenario 8.27.
-- *Before P3*: 5.6.1(b) asked "and they are a known party of that version", which Ana is not, beside the holder's clause; read as one list, (5) was **not shown** even with (3).
-
-*The vector, for the codemeister*: acts (1) to (6); rules 5.6.1(b), 5.6.4, 5.10.7; expected (5) **shown** as Ana's signature, the power named; without (3), **not shown**. To be written now; K7 kind G's cMIP is one the vector must give.
+*Unchanged by the model.* *Acts*: (1) T1, an offer by S, a role R, a power of sort `assent` whose rule says yes to S signing for a holder of R who has given it in a Statement of her own. (2) Ana fills R. (3) Ana signs, in her own name, a Statement of a K7 kind G naming S and the sort `assent`. (4) S assents for Ana to T2, a new agreement. *Answers*: Ana is bound by (4) (5.6.1(b)); the verifier names, with her filling, T2 and the power (5.10.7).
+*Runs on*: G's K7 cMIP; the power's K3 (test cMIPs). *Beneath*: who signed; the unknown party's protection.
 
 ### 8.35 The lead's reading 6: a Terms act signed by one who is no party
 
-*Source*: the lead's reading 6 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A Terms act signed by someone who is not a party is invalid." It rests on "There is no such thing as an unsigned act" and "Known parties". The scribe's question 5 (For Nobody, 7; Fable 1.10).
-
-*Acts*: (1) Dana signs a Terms act V1 naming Ana and Ben as signers, `authors` naming Ana.
-
-*Answers*:
-- On the reading: **invalid**, at §4.4's case 5, after the authors: the act's signer is named by no party `[0, signer]` (encoding 3, E13, "A signer who is no party"; section 9, step 7.4).
-- Draft 26 now gives the same (5.3.1, P3-26: "so are Terms that carry `parties` and whose signer is not one of the parties they name as signers"; §4.4 case 5, P3-27): **invalid**, case 5, after the authors. Before P3, no case of 5.3.1 or §4.4 named it.
-- The pair of scenario 8.25: there the signer, Carla, is a party, and the act passes.
-
-*The vector, for the codemeister*: one Terms act, its outside naming Dana, `parties` naming Ana and Ben as signers, `authors` holding Ana's position; rule 5.3.1 (E13); expected **invalid**, case 5. Draft 26 and encoding 3 now give it; to be written now.
+*Unchanged by the model.* Dana signs T1 naming Ana and Ben as signers, `authors` Ana: **invalid** under 5.3.1 (§4.4, case 5): "so are Terms whose signer is not one of the parties they name as signers" (5.3.1).
+*Runs on*: none. *Beneath*: who signed.
 
 ### 8.36 The lead's reading 7: a known party's filling and a later version
 
-*Source*: the lead's reading 7 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A spot a known party fills is a known party's act: 5.10.7 (an unknown party's filling) does not stand for it." It rests on "A filling gives no power", with "that fills an unknown party spot" and "these two are not the same class or IDs". The scribe's question 7 (For Nobody, 2).
-
-*Acts*: (1) V1, an offer naming S and Ben as signers, a role R with its K5 cMIP, `in_force`, and an update condition C whose cMIP accepts an update S alone signs. (2) V1 in force and pinned. (3) Ben fills R: an assent of Ben's that R's K5 cMIP reads as a proof, naming V1. (4) V2, `replaces` V1, signed by S alone, changing what R's holders earned; valid by C, pinned.
-
-*Answers*:
-- (3): Ben's filling **shown**, a known party's act, no unknown party's (§3.2, **Unknown party**; scenario 8.29).
-- (4): V2 **valid**, by C, and **in force**, once pinned, **as shown** (5.5.1). Ben is bound by V2 as a known party of V1, though he did not sign it (5.6.1(c)).
-- Draft 26 now (5.10.7, P3-23, P3-24: "An unknown party's filling (§3.2) has exactly the rights offered by the version it was earned under"; "A spot a known party fills is a known party's act (§3.2), and this rule does not stand for it"): 5.10.7 does not stand for Ben's filling; the known parties' rules apply to it, and Ben is bound by V2 as a known party (5.6.1(c)).
-- Draft 26 now (P5-6, P5-7, P5-19, P5-23, P5-24; the lead's answer 1 of 22:30): 5.10.6's last sentence, 5.10.8, 5.5.7(f) and §3.3 **Apply** speak of an unknown party's filling, and §3.2 **Unknown party** says of a spot a known party fills that "an update reaches it as it reaches that party": V2 reaches what Ben's filling earned as it reaches Ben, a known party bound by V2 (5.6.1(c)). *As P3 left it*: those rules spoke of any filling, and two readings stood side by side.
-
-*The vector, for the codemeister*: acts (1) to (4); rules §3.2 **Unknown party**, 5.6.1(c), 5.10.6, 5.10.7; expected: V2 reaches Ben's filling as it reaches Ben (§3.2), Ben bound by V2 (5.6.1(c)); 5.10.7 does not stand for it. To be written now.
+*On the model*: a known party's filling and a new agreement. *Acts*: (1) T1, an offer naming S and Ben as signers, a role R, an ending condition S alone meets. (2) Ben fills R. (3) S signs T2 carrying CP(T1), changing what R's holders earn.
+*Answers*: T1 **ended** by S's signature (5.5.2(d)); Ben is a known party, and bound by that ending as the scheme he signed says (5.6.1(c)); his filling is a known party's act, and the unknown party's protection does not stand for it (§3.2, 5.10.7). T2 binds only its signer (5.5.4). A buyer named as a signer is a partner (§3.2).
+*Runs on*: K4 (a test cMIP: S alone); R's K5 cMIP (a test cMIP). *Beneath*: who signed.
 
 ### 8.37 P6: two of two keepers, one cheats
 
-*Source*: "How many keepers are needed: the agreement and its cMIP decide" (27 November, 23:22–23:28). He: "That scenario was a two out of two, to check that none of the two cheated." Read with "Two keepers named, both needed" (16:40–16:44), he: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do".
-
-*Acts*: (1) V1 in force, naming Ana and Ben as signers, keepers K1 and K2, no cMIP beside them, no update condition. (2) U1, `replaces` V1, signed by Ana (her Terms act, her assent, §4.3); A(Ben, U1). (3) K1's records place U1 and Ben's assent after V1's acts; K2's records place, at the positions K1 gives them, other acts, and no U1: K2 cheats, or is broken.
-
-*Answers*:
-- V1 names no cMIP beside its keepers: every keeper named is needed, both (5.8.3).
-- U1's gate counts only the assents its keepers show, as many as 5.8.3 asks (5.5.1(a)): K2 does not show them, and the keepers disagree on what stands at those positions. About U1 as a replacement: **not shown**, per keeper, K1 and K2 named, with the reason that the keepers disagree; the records of each are shown as evidence of the disagreement (5.8.3, 5.5.5(d)). By default the answer is never **not valid** (5.5.7(e)). V1 stays in force, per keeper; answers that rest only on what K1 and K2 agree on stand (5.8.3).
-- No one decides which keeper lied: a verifier shows both records and chooses neither (5.8.3; "Two disagreeing has its value though", 26 November).
-- *Re-read by P7* (his 23:52 to 00:00; the lead's 23:55, 3): this is the default, cross verification, the socket empty; K1 is named as showing U1 and K2 as not showing it (5.5.3, 5.8.4); the answers above stand. *Variant* (the lead's 23:55, 4): K2 gives two signed answers on U1's position that contradict each other: K2 counts as one not showing U1, and the contradiction is shown as evidence (5.8.3, 5.8.4); by default both are needed, so U1 is **not shown** as a replacement, per keeper, K2 named as not showing it.
-
-*The vector, for the codemeister* (none written): acts (1) to (3), K1's and K2's records as the keepers' answers; rule 5.8.3; expected U1 **not shown** as a replacement, per keeper, reason "the keepers the Terms name disagree" (§3.6), both records shown, K1 named as showing it and K2 as not; V1 in force, per keeper; the variant, U1 **not shown**, K2's two answers shown as evidence. Writable now.
+*Acts*: (1) T1 in force, Ana and Ben, keepers K1 and K2, nothing beside them. (2) A Statement S1 of Ana's, lodged at K1 and K2. (3) K1 provides S1; K2, asked, provides other acts and not S1.
+*Answers*: S1 is not at every keeper named: **not shown** as an act of the agreement, K2 named as not holding it (5.8.3); it makes no fork (5.8.2). Where the verifier holds S1 signed and K2 cannot be reached: **unchecked**, S1 and the acts that name it shown as evidence (5.8.3; the MOR lead's reading A6). Cross verification makes K2's omission seen: that is its point (5.8.3). *The old case changed*: no records placing acts at positions.
+*Runs on*: K9 empty (cross verification). *Beneath*: the stated where.
 
 ### 8.38 P6: two of three keepers by a named cMIP; one keeper dies
 
-*Source*: the same entry (23:22–23:28). He: "I mean… serious businesses would at least have 3 keepers with a two out of three rule no?"; "In a two out of three, you keep that, plus you add a way out if one of the three dies." The socket beside the keepers is his, "Keepers: cross verification by default, a socket to lift it" (27 November, 23:52, to 28 November, 00:00): "It’s own socket makes sense."; "Agreed, and there is a socket to lift it." Q lifts the default, cross verification.
-
-*Acts*: (1) V1 in force, naming Ana and Ben as signers, keepers K1, K2 and K3, and beside them a cMIP Q (task K9) that asks two of the three (its cMIP held); no update condition. (2) K3 stops answering. (3) U1, `replaces` V1, signed by Ana; A(Ben, U1). (4) K1 and K2 place U1 and Ben's assent, at positions on which they agree; K3 shows nothing.
-
-*Answers*:
-- How many keepers must show U1 is Q's (5.8.3, K9): asked on the records the verifier holds, it answers yes, K1 and K2 showing it.
-- U1's gate: the default asks Ana and Ben, and both assents are shown by enough keepers: **valid**, by default, per keeper (5.5.1(a), 5.5.7(e)). Its pin: shown after V1's acts, per K1 and K2 (5.5.1(b)): U1 **in force**, **per keeper**, K1 and K2 named, K3 named as not showing it (5.8.3). The agreement goes on by the two.
-- *Variant*: K1 and K2 disagree on U1's position, K3 silent: what the answer rests on is Q's (5.8.3, K9); the verifier names the three keepers and shows the records of each as evidence.
-- *Variant*: the verifier lacks Q: whether enough keepers show U1 is **unchecked** (5.8.3, §3.6), and so is U1 **in force**.
-- *Variant* (P7, the lead's 23:55, 4): K3 gives two signed answers on U1 that contradict each other: K3 counts as one not showing U1, and the contradiction is shown as evidence; K1 and K2 still meet Q: U1 **in force**, per keeper, K1 and K2 named, K3 named as not showing it, its two answers shown (5.8.3, 5.8.4).
-- *Variant*: with no cMIP beside the three keepers, every keeper named is needed: U1 **not shown**, per keeper, K3 named as not showing it (5.8.3); V1 stays where the keepers left it, and what the parties do next is a new agreement (5.8.3, scenario 8.28).
-
-*The vector, for the codemeister* (none written): acts (1) to (4); rules 5.8.3, 5.5.1, K9; expected Q's yes, U1 **valid** by default and **in force**, per keeper, K1 and K2 named as counted, K3 as not showing it; variants as above. Waits on encoding 3's section 11, item 15 for where Q is written.
+*Acts*: (1) T1 in force, Ana and Ben, keepers K1, K2, K3, and beside them a cMIP Q asking two of the three. (2) K3 dies. (3) A Statement of Ana's, lodged at K1 and K2.
+*Answers*: Q answers yes for (3): it is at two of three (5.8.3); it counts. An answer of absence ("nothing ends T1") is given as far as the acts held show, naming K1 and K2 (5.5.3). In a variant Q is a keeper service that keeps an ordered, signed record: its order is its own answer, labelled so (5.8.3).
+*Runs on*: `stand-in: two of three keepers`, K9; in the variant, `stand-in: ordered keeper record`. *Beneath*: the stated where. *v38*: 1.1, 1.5.
 
 ### 8.39 P6: one keeper dies, none named beside it; the buyer's filling
 
-*Source*: the same entry (23:22–23:29). He: "My question is how can the bytes prove that the keeper was alive when she signed?"; "Provided that there is a back up copy somewhere…"; and (23:29), on a client keeping the keeper's record: "It’s not something I would specify."
-
-*Acts*: (1) V1 in force, naming Ana as signer, keeper K, no cMIP beside it, and a role R with its K5 cMIP and `in_force` (5.4.2). (2) Dana, an unknown party, fills R: A(Dana, V1), her proof naming V1; K places it, and signs its record. (3) K dies: it shows nothing more.
-
-*Answers*:
-- One keeper named, so it is needed (5.8.3). After (3), the agreement stays where K left it (5.8.3).
-- *The verifier holds no copy of K's signed record*: whether Dana's filling stands is **unchecked**, with the reason that K's record is not held (5.10.6, §3.6 **Unchecked**, which names it since P7, the lead's 23:55, 1). Never a yes, and never a no.
-- *The verifier holds one copy of K's signed record, showing (2)*: her filling stands: **shown**, with its proof and V1 named (5.10.2), bound by V1 for as long as its words say, on V1's clock (5.10.8); nothing reaches it, a new agreement that names V1 included (5.10.6). The copy counts for every answer about order, not only for her filling: what K signed stands when it no longer shows the agreement's acts (5.8.4; P7, the lead's 23:55, 2).
-- No client is bound to keep a copy: the one duty written for clients is 5.12.9's (§3.6 **Client**).
-
-*The vector, for the codemeister* (none written): acts (1) to (3); rule 5.10.6; expected **unchecked** with no copy of K's record held; with one, the filling **shown**, V1 named. Writable now, with K's record given as a held copy.
-
-Added by P2: scenarios 8.27 to 8.29, one for each of his three decisions of 27 November, evening, each naming the vector of P1's "For P2"; scenarios 8.30 to 8.36, one for each of the lead's seven readings of 20:41, each written on the reading, with draft 26's answer beside it where they differ; and the re-reading of 8.2 to 8.7, 8.11, 8.13 to 8.18, 8.20 to 8.22, 8.25 and 8.26 (the trace, P2). P3 brought 8.4, 8.6, 8.17, 8.22, 8.25, 8.27, 8.28 and 8.30 to 8.36 to draft 26 as P3 leaves it, each change listed in the trace (P3). P5 rewrote the re-readings of 8.4, 8.5, 8.6, 8.17 and 8.22, 8.27's (4), and 8.28, 8.30, 8.31, 8.32 and 8.36 on his 22:30, 22:36 and 22:39 and the lead's readings of 22:45, each expected answer with them (the trace, P5). P6 re-read 8.4, 8.22 and 8.31, rewrote parts of 8.28 and 8.30, and added 8.37 to 8.39, on his 23:22 to 23:32 and the lead's readings of 23:22 and 23:33, each expected answer with them (the trace, P6). P7 re-read 8.22, 8.28, 8.37, 8.38 and 8.39 on his 23:52 to 00:00 and the lead's four lines of 23:55, with a variant each in 8.37 and 8.38 (the trace, P7).
+*Acts*: (1) T1 in force, Ana a signer, keeper K, nothing beside it, a role R. (2) Dana fills R under T1, at K. (3) K dies. (4) Ana signs T2 carrying CP(T1).
+*Answers*: T2's pointer meets T1's default (Ana alone): T1 **ended** (5.5.2(e), 5.5.4); not dissolved while Dana's obligation is open, and where the verifier cannot tell, the dissolution **not shown** (5.5.3). Dana's filling: K cannot be reached: **unchecked**, with every act held that bears on it (her rely, her copies, Ana's acts naming hers) shown as evidence (5.10.6, 5.8.3; the MOR lead's reading A8). *The old case changed*: no keeper's signed record to hold a copy of.
+*Runs on*: R's K5 cMIP (a test cMIP); `stand-in: open obligation check`. *Beneath*: the stated where; the unknown party's protection; who signed.
 
 ## 9. The trace, rule by rule
 
-**In plain words.** One row for each rule of draft 26, so that a reader can follow any rule back to where it came from: the draft 25 rule it was written from, how the brief sorted that rule, the exchange of the ledger that shaped it, the settled note's row where one carries it, and the reading of the MOR lead's where one shaped it. Nothing here is a decision.
-
-**How to read it.** Built by script (`trace10.py`, M10's scratch script) from the trace file's rows (M2 to M7), the brief's sort (its section 2), the ledger's own headings on main, and the "Shaped" lists of section 6 above, then read by eye. *Draft 25*: the rule or rules each trace row names (a lettered clause of draft 26 is in its rule's row); **N1** to **N9** are the brief's new rules. *The brief's sort*: as the brief has it; where the brief read a rule two ways, the way the lead's reading settled it is added (section 6.3). *The ledger*: each exchange by its heading as the ledger on main has it, with its date; "no entry (the brief)" where the brief found none. *Settled note*: its rows, as the trace cites them (every row of it is the lead's reading). *The lead's reading*: the entry of section 6 that shaped the rule, by its number there; "14:59" is the lead's reading of 27 November, 14:59, which shaped edits (i) and (j) of M10 (the trace, M10's part) and is not yet in section 6. A rule's *Rests on* and *His words* in full are in the trace file.
+**In plain words.** Each rule of draft 26 as P8 left it, with what P8 did to it and what it rests on. "As P7" means its words are P7's but for words of the model ("version" to "Terms", "update" to "ending", a removed pointer); its reasons are in section 5's entries before P8. His entries are cited by their ledger headings (`docs/decisions.md` on main, 28 November unless dated), each read whole, its "Arrived at" line the MOR lead's, to check; the lead's readings by their notes' letters and numbers: A and B, `docs/lead/notes/2026-11-28-no-versions-test-sorted.md`; "answer n", `docs/lead/notes/2026-11-28-answers-to-s1.md`; "sixth n", the sixth attack's table in `docs/lead/notes/2026-11-28-ground-for-p8.md`; "P7's n", `docs/lead/notes/2026-11-27-readings-for-p2.md`, "P7's three". The trace as P7 left it is section 11.8.
 
 ### 9.1 The numbered rules of §5
 
-| draft 26 | draft 25 | the brief's sort | the ledger entry, heading and date | settled note | the lead's reading |
-|---|---|---|---|---|---|
-| 5.1.1 | G1.1 | G1.1: stays | no entry (the brief) | — | — |
-| 5.1.2 | G1.2 | G1.2: changes | "Nothing about me without my signature" (18 November); "Delegation is a leftover" (18 November) | — | P3-32: reading 10(b) of 20:55; P5-8: the lead's answer 2 of 22:30 |
-| 5.1.3 | G1.3 | G1.3: stays | no entry (the brief) | — | — |
-| 5.1.4 | G1.4 | G1.4: two ways, read "changes" by the lead (6.3) | "Whose place counts; protect the unknown party, as a principle" (26 November); "A condition in time with no anchor is refused" (26 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.14 C6 |
-| 5.1.5 | G1.5 | G1.5: stays | no entry (the brief) | — | — |
-| 5.2.1 | G2.1 | G2.1: stays | "The words of Terms are a Text act" (26 November) | — | — |
-| 5.2.2 | N4 | N4: new | "The words of Terms are a Text act" (26 November); "Signing an agreement relies on its words" (26 November); "A missing act stays unchecked: no door around it" (26 November) | Q25, Q24 | 6.5 row 3; 6.14 F11, C16/F11 |
-| 5.2.3 | G2.2 | G2.2: stays | no entry (the brief) | Q7 | 6.6 row 3 |
-| 5.3.1 | G3.1 | G3.1: two ways, read "changes" by the lead (6.3) | "There is no unsigned act: the author is a known party" (27 November); "The signer of a Terms act is an author" (27 November) | — | 6.5 row 1; 6.13; 6.14 C1/S; 6.15; P3-26: reading 6 of 20:41 |
-| 5.3.2 | G3.2 | G3.2: stays | no entry (the brief) | — | — |
-| 5.4.1 | G4.1, G4.6 | G4.1: two ways, read "changes" by the lead (6.3); G4.6: changes | "Valid means in force: one gate for an update" (26 November); "In force once pinned" (18 November); "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November); "A missing act stays unchecked: no door around it" (26 November); "Knots are knots: one reading, "shown after"" (27 November); "Publishing the Terms is the publisher's assent" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | Q7, M19 | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1; 14:59, M8 (edit (i); the trace, M10); 6.14 C2, C20, C5; P3-5, his 20:50; P3-17, P3-18: reading 2 of 20:41; P3-39: reading 18 of 20:55; P5-9, P5-10: his 22:36 and 22:39, the lead's note of 22:45 |
-| 5.4.2 | G4.2 | G4.2: stays | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3; P3-43: reading 19(a) of 20:55 |
-| 5.4.3 | G4.3 | G4.3: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November); "A filling gives no power" (27 November) | M15 | 6.8 row 1; 6.14 F17/C10 |
-| 5.4.4 | G4.4 | G4.4: stays | no entry (the brief) | — | P3-42: reading 18 of 20:55 |
-| 5.4.5 | G4.10 | G4.10: changes | "In force once pinned" (18 November); "A fork is a fork" (27 November); "What a race stops" (18 November); "The place vouches for the chaining only" (26 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1; 6.14 C15; P3-31, P3-44: readings 10(a), 19(b) of 20:55 |
-| 5.5.1 | G4.8, N1 | G4.8: changes; N1: new | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "The two gates" (17 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "An update the keeper never showed is no update" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | Q7 | 6.1 Item 28: "shown after"; 6.7 row 1; 6.1 row 3; 6.2 Item 31: the wording of the gate and the pin; 6.10 row 3 (the colon); 6.14 C3, F4, C4, C46a; P3-9, his 21:42; answers 2 and 3 of 21:45; P5-11, P5-12, P5-27: his 22:30, 22:36 and 22:39; the lead's 22:45, 1 |
-| 5.5.2 | G4.5 | G4.5: changes | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Who signs an update by default: the known parties" (26 November) | — | — |
-| 5.5.3 | G4.6 | G4.6: changes | "The place vouches for the chaining only" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "No rule for an exception logic covers" (27 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; P3-40: reading 18 of 20:55; P5-13: his 22:39; P7-2: the lead's 23:55, 3 |
-| 5.5.4 | G4.7, G4.7(a), G4.7(b), G4.7(c), G4.7(d), G4.7(e) | G4.7: changes; G4.7(a): changes; G4.7(b): changes; G4.7(c): changes; G4.7(d): stays; G4.7(e): stays | "The gate and the pin; a fork, not a race" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "The place vouches for the chaining only" (26 November); "Ana's month ends by the clock the agreement names" (27 November); "Whose place counts; protect the unknown party, as a principle" (26 November); "A missing act stays unchecked: no door around it" (26 November); "A late version 3 is rejected" (26 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "An update the keeper never showed is no update" (27 November); "No rule for an exception logic covers" (27 November) | M20, M5 | 6.1 Item 28: "shown after"; 6.2 Item 31: the wording of the gate and the pin; 6.6 row 4; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.3 G13.1; 6.7 row 1; 6.1 row 3; 6.10 row 3 (5.5.4(c)); 6.14 F4, C46b, C17/F2, C28; P3-19 to P3-21: reading 3 of 20:41; P5-14 to P5-16: his 22:30; the lead's 22:45, 2 |
-| 5.5.5 | G4.8, G4.8(a), G4.8(b), G4.8(c), G4.8(d), G4.8(e) | G4.8: changes; G4.8(a): changes; G4.8(b): stays; G4.8(c): stays; G4.8(d): changes; G4.8(e): stays | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "The place vouches for the chaining only" (26 November); "A missing act stays unchecked: no door around it" (26 November); "The known parties of a version are the signers it names" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | M11 | 6.2 Item 33: the default signers; 6.6 row 5; 6.1 row 1; 6.10 row 1; 6.13; 6.14 F3, C46c; P3-7: reading 1 of 20:41, answer 1 of 21:45; P3-11, his 21:42; P5-17: his 22:39 |
-| 5.5.6 | G4.9 | G4.9: changes | "What a dissolution is" (18 November); "Leaving takes two acts" (18 November); "The gate and the pin; a fork, not a race" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November) | — | 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
-| 5.5.7 | G4.11, G4.11(a), G4.11(b), G4.11(c), G4.11(d), G4.11(e), G4.11(f), G4.11(g), G4.11(h), G4.11(i) | G4.11: stays; G4.11(a): changes; G4.11(b): stays; G4.11(c): changes; G4.11(d): changes; G4.11(e): changes; G4.11(f): changes; G4.11(g): changes; G4.11(h): stays; G4.11(i): changes | "Valid and in force, two words, two jobs" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "A condition in time with no anchor is refused" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November); "A hand count is the client's choice" (26 November); "What a dissolution is" (18 November); "Publishing the Terms is the publisher's assent" (27 November); "An update the keeper never showed is no update" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.2 Item 33: the default signers; 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4; 6.7 row 2; 6.8 row 1; P3-6, his 20:50; P3-8: reading 1 of 20:41, answer 1 of 21:45; P5-18: the lead's 22:45, 1; P5-19: the lead's answer 1 of 22:30 |
-| 5.6.1 | G5.1, G5.1(a), G5.1(b), G5.1(c) | G5.1: stays; G5.1(a): stays; G5.1(b): changes; G5.1(c): changes | "Nothing about me without my signature" (18 November); "A power given binds its giver" (18 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "The gate and the pin; a fork, not a race" (26 November); "The giver bears it, not the agent" (27 November); "A filling gives no power" (27 November) | — | 6.3 G5.6(f) and G10.6(a); 6.13; 6.14 C18; P3-22: reading 5 of 20:41, answer 4 of 21:45, reading 8 of 20:55 |
-| 5.6.2 | G5.2 | G5.2: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "Only rules in the hashed text" (17 November); "Who signs an update by default: the known parties" (26 November); "A filling gives no power" (27 November) | — | 6.14 F17/C10 |
-| 5.6.3 | G5.3 | G5.3: stays | "The giver bears it, not the agent" (27 November); "A filling gives no power" (27 November) | — | 6.13 |
-| 5.6.4 | G5.4 | G5.4: changes | "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 Item 28: "shown after"; 6.14 C19, C12/F12 |
-| 5.6.5 | G5.6, G5.6(a), G5.6(b), G5.6(c), G5.6(d), G5.6(e), G5.6(f) | G5.6: stays; G5.6(a): changes; G5.6(b): stays; G5.6(c): stays; G5.6(d): stays; G5.6(e): stays; G5.6(f): two ways, read "stays" by the lead (6.3) | "Who signs an update by default: the known parties" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Only rules in the hashed text" (17 November); "A power given binds its giver" (18 November); "Nothing about me without my signature" (18 November) | M22 | 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a) |
-| 5.6.6 | G5.7, G5.7(a), G5.7(b), G5.7(c) | G5.7: changes; G5.7(a): changes; G5.7(b): changes; G5.7(c): changes | "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Firing an employee" (18 November); "There is no unsigned act: the author is a known party" (27 November); "In force once pinned" (18 November); "A fork is a fork" (27 November) | — | 6.1 Item 1: the pin for a first version; 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a); 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
-| 5.7.1 | G6.1 | G6.1: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November) | — | 6.3 G6.1 and G6.2, with E23 |
-| 5.7.2 | G6.2 | G6.2: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.3 G6.1 and G6.2, with E23; 6.1 row 1; 6.10 row 1; 6.14 F7, C30 |
-| 5.8.1 | G7.1, N2 | G7.1: changes; N2: new | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November) | — | 6.1 Item 4: a keeper's record, and Identity's rule 34; 6.4 row 2 |
-| 5.8.2 | N2 | N2: new | "The place vouches for the chaining only" (26 November) | — | — |
-| 5.8.3 | G7.2, N2 | G7.2: changes; N2: new | "The place vouches for the chaining only" (26 November); "Two keepers named, both needed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | M12 | 6.13; 6.14 C13/F16/S5, C46d; P3-12, his 21:42; P5-20: his 22:36 and 22:39; the lead's 22:45, 3; P7-3; P7-4: the lead's 23:55, 4 |
-| 5.8.4 | G7.2 | G7.2: changes | "The place vouches for the chaining only" (26 November); "The place is a pointer" (17 November); "Two keepers named, both needed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "The gate and the pin; a fork, not a race" (26 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.7 row 1; 6.13; 6.14 C28; P3-13, P3-14: his 21:42, readings 2 and 3 of 20:41; P3-41: reading 18 of 20:55; P5-21, P5-22: the lead's 22:45, 2; P7-5: the lead's 23:55, 2 and 3 |
-| 5.8.5 | G7.4 | G7.4: changes | "Whose anchoring wins" (an earlier exchange, headed by draft 7); "Whose place counts; protect the unknown party, as a principle" (26 November); "Ana's month ends by the clock the agreement names" (27 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.8 row 1 (edit (h)) |
-| 5.8.6 | N9 | N9: new | "A condition in time with no anchor is refused" (26 November); "A specification is a Text act, named by its id" (27 November) | Q26 | 6.7 row 2; 6.14 C21/C22 |
-| 5.9.1 | G8.5 | G8.5: stays | no entry (the brief) | — | — |
-| 5.10.1 | G10.1 | G10.1: stays | no entry (the brief) | — | — |
-| 5.10.2 | G10.2 | G10.2: stays | "For the unknown party there is no update, only the agreement she signed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A filling gives no power" (27 November) | — | 6.8 row 1; 6.8 row 1 (edit (h)); 6.14 F9/F10/C24, C23 |
-| 5.10.3 | G10.3 | G10.3: stays | "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
-| 5.10.4 | G10.4 | G10.4: stays | no entry (the brief) | — | — |
-| 5.10.5 | G10.5 | G10.5: changes | "A condition in time with no anchor is refused" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
-| 5.10.6 | N5 | N5: new | "A buyer under a replaced version: what version 2 says" (26 November); "Protect the unknown party is an Agreements principle" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Who signs an update by default: the known parties" (26 November); ""Renewed on the terms then current" cannot be built" (27 November); "A filling gives no power" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.8 row 1; 14:59, M9 (edit (j); the trace, M10); 6.13; 6.14 F17/C10; P5-23: the lead's answer 1 of 22:30, and 22:45, 4; P7-6: the lead's 23:55, 2 |
-| 5.10.7 | G10.6, G10.6(a) | G10.6: changes; G10.6(a): two ways, read "stays" by the lead (6.3) | "A buyer under a replaced version: what version 2 says" (26 November); "A power given binds its giver" (18 November); "Ana's month ends by the clock the agreement names" (27 November); "A filling gives no power" (27 November) | M22 | 6.3 G5.6(f) and G10.6(a); 6.14 F9/F10/C24; P3-23 to P3-25: readings 7 and 5 of 20:41 |
-| 5.10.8 | G10.7, N6 | G10.7: changes; N6: new | "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November); "A filling gives no power" (27 November) | — | 6.8 row 1; 6.1 row 3; 6.10 row 3 (no clock); 6.14 C27, F9/F10; P5-24: the lead's answer 1 of 22:30 |
-| 5.11.1 | G11.1 | G11.1: stays | no entry (the brief) | — | — |
-| 5.11.2 | G11.2 | G11.2: stays | "Where three rules live" (17 November) | — | — |
-| 5.11.3 | G11.3 | G11.3: two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
-| 5.11.4 | G11.4(e) | G11.4(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.4(e) |
-| 5.11.5 | G11.6(a) | G11.6(a): stays | "Where three rules live" (17 November); "Seeing and being told" (18 November) | — | — |
-| 5.11.6 | G11.6(b) | G11.6(b): two ways, read "stays" by the lead (6.3) | "Seeing and being told" (18 November) | — | 6.3 G11.6(b); 6.1 row 3; 6.10 row 3 (headings) |
-| 5.11.7 | G11.7 | G11.7: stays | "Where three rules live" (17 November) | — | 6.10 row 3 (headings) |
-| 5.11.8 | G11.8 | G11.8: stays | "Where three rules live" (17 November); "The contest" (15 November) | — | 6.14 C12/F12 |
-| 5.11.9 | G14.5(e) | G14.5(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | 6.3 G14.5(e); 6.8 row 2; 6.1 row 2; 6.10 row 2; 6.14 C32; P3-45: reading 19(c) of 20:55 |
-| 5.12.1 | N8 | N8: new | "A fork is a fork" (27 November); "What a race stops" (18 November) | — | — |
-| 5.12.2 | G12.1 | G12.1: changes | "A fork is a fork" (27 November); "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November); "An update the keeper never showed is no update" (27 November) | — | P5-25: his 22:30 |
-| 5.12.3 | G12.2 | G12.2: stays | "No release by a fork or a key" (18 November); "A fork is a fork" (27 November) | — | 6.14 F5; P3-30: reading 9 of 20:55 |
-| 5.12.4 | G12.3 | G12.3: changes | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "Who signs an update by default: the known parties" (26 November); "A fork is a fork" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.2 Item 33: the default signers; 6.6 row 1; 6.1 row 3; 6.10 row 3 (kept, to check); 6.14 C39 |
-| 5.12.5 | G12.4 | G12.4: stays | "The gate and the pin; a fork, not a race" (26 November) | — | — |
-| 5.12.6 | G12.5 | G12.5: stays | "A fork is a fork" (27 November); "A missing act stays unchecked: no door around it" (26 November) | — | — |
-| 5.12.7 | G12.6 | G12.6: stays | no entry (the brief) | — | — |
-| 5.12.8 | G12.7 | G12.7: stays | "Whose place counts; protect the unknown party, as a principle" (26 November) | — | — |
-| 5.12.9 | G12.8 | G12.8: stays | no entry (the brief) | — | 6.4 row 4 |
-| 5.13.1 | G13.1 | G13.1: two ways, read "changes" by the lead (6.3) | "Knots are knots: one reading, "shown after"" (27 November); "The words of Terms are a Text act" (26 November) | — | 6.3 G13.1; 6.14 F6/C26, C25 |
-| 5.13.2 | G13.2 | G13.2: stays | no entry (the brief) | — | — |
-| 5.13.3 | N7 | N7: new | "Knots are knots: one reading, "shown after"" (27 November); "A missing act stays unchecked: no door around it" (26 November); "The place is a pointer" (17 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 Item 28: "shown after"; 6.2 Item 32: the stall; 6.7 row 1; P3-15: the batch of 21:45, on P2's "For P3" 8 and 9; P5-26: the lead's 22:45, 2 |
-| 5.13.4 | G13.3 | G13.3: changes | "Knots are knots: one reading, "shown after"" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.7 row 1 |
-| 5.13.5 | G13.4, G1.4 | G13.4: changes; G1.4: two ways, read "changes" by the lead (6.3) | "A condition in time with no anchor is refused" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November) | — | 6.1 Item 28: "shown after"; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.14 C31/F8 |
+| Rule | P7's | What P8 did | It rests on |
+|---|---|---|---|
+| 5.1.1 | 5.1.1 | as P7 | |
+| 5.1.2 | 5.1.2 | "in force (§5.5)" read as §5.4 and §5.5; an agreement MAY sign an ending; "no update condition can give it for a party who did not sign that version" to "no ending condition can give it for a party who did not sign them" | "Nothing is updated: new acts"; "The ending condition" |
+| 5.1.3 | 5.1.3 | as P7 | |
+| 5.1.4 | 5.1.4 | the receiver read from the agreement's one Terms act; the version, keeper and fork-of-Terms clauses go; an ended agreement's receiver read under its words | "No versions: the chain guards the end and forces knots"; B12 |
+| 5.1.5 | 5.1.5 | as P7 | |
+| 5.2.1 | 5.2.1 | as P7 | |
+| 5.2.2 | 5.2.2 | a sentence: the keepers provide the acts, the words are fetched where Text acts are | sixth 22 |
+| 5.2.3 | 5.2.3 | the left-unread list loses the power of sort `replaces` and `in_force` in an update | "No versions: the chain guards the end and forces knots" |
+| 5.3.1 | 5.3.1 | "that carry `parties`" goes: every Terms act carries them | the same |
+| 5.3.2 | 5.3.2 | as P7 | |
+| 5.4.1 | 5.4.1 | "a first version" to Terms; the pin by knots only, keepers no longer pinning; an act counts at the stated where; provisional until anchored; in force until ended | "The keeper's ordered record is a service, not the core"; "An act that names a clock is anchored to it" |
+| 5.4.2 | 5.4.2 | "in every version" and the update clause go | "No versions: the chain guards the end and forces knots" |
+| 5.4.3 | 5.4.3 | "replaced" to "ended"; the reasons "not yet anchored" and "made after its ending" | "No dissolving with open obligations to unknown parties"; "An act that names a clock is anchored to it" |
+| 5.4.4 | 5.4.4 | as P7 | |
+| 5.4.5 | 5.4.5 | by knots only; "late" to "comes after the completion"; a sentence: a power is given only by Terms in force | sixth 5; "The keeper's ordered record is a service, not the core" |
+| 5.5.1 | new (P7's 5.5.1 to 5.5.7 removed) | no versions | "No versions: the chain guards the end and forces knots"; "Nothing is updated: new acts" |
+| 5.5.2 | P7's 5.5.7, renamed | the ending condition, valid or not valid; its default, every known party; an ending by clock needs no further act | "The ending condition"; answer 1; sixth 4, B18; B15 |
+| 5.5.3 | new | ended and dissolved; standing obligations delivered under it; new commitments with the signatures they are with; no dissolving while an obligation toward an unknown party is open, not shown where a verifier cannot tell; once ended with a filling open; answers of absence | "No dissolving with open obligations to unknown parties"; "The old collective and new commitments: cMIP business"; “"As far as I can see" is the honest answer”; B5, B10, B12; answer 24 as his 15:28 to 15:30 corrects it |
+| 5.5.4 | new | the closing pointer: no longer valid, and it once existed; closes only where its signatures meet the old ending condition; several; wherever kept; where it closes nothing, in force among its signers, each bound by both | "The closing pointer: no longer valid, and it once existed"; "Ending the old agreement is an act on its chain"; "A keeper is a relay: lodge, relay, fetch"; A1, B20; answer 2 |
+| 5.5.5 | new | two endings a fork; ordered by knots, the first ends it | "A fork is a fork"; his 22:36 (26 November); A2; answers 7, 9, 17 |
+| 5.5.6 | new | an agreement that acts as a party ends only where every party it is bound to signs, unknown parties excluded; no succession | "An agreement that acts as a party ends only with those it owes"; "A change of who they are: renew or exit" |
+| 5.6.1 | 5.6.1 | (b) "version" to Terms; (c) a known party bound by an ending as the scheme they agreed to says | "No dissolving with open obligations to unknown parties" (his 08:58) |
+| 5.6.2 | 5.6.2, rewritten | an agent's assent to Terms that carry a closing pointer signs it for the giver unless the power's rule says otherwise | B11 |
+| 5.6.3 | 5.6.3 | as P7 | |
+| 5.6.4 | 5.6.4, rewritten | an act under a power whose agreement has ended: by knots; by a clock, only by its own anchoring | "An act that names a clock is anchored to it" |
+| 5.6.5 | 5.6.5 | the constitution is the ending condition; the judicial changes only by a new agreement | "The ending condition"; "No versions: the chain guards the end and forces knots" |
+| 5.6.6 | 5.6.6 | the grantor acts by ending, a new agreement, or a counter signature | the same |
+| 5.7.1 | 5.7.1 | a signer's line starts afresh in each agreement | B3 |
+| 5.7.2 | 5.7.2 | an act not at the stated where is no tip; "whatever a keeper shows" goes | "The keeper's ordered record is a service, not the core" (his 08:36); sixth 3 |
+| 5.8.1 | 5.8.1, rewritten | the keeper as the stated where; lodge, relay, fetch; no order | "The keeper's ordered record is a service, not the core"; "A keeper is a relay: lodge, relay, fetch" |
+| 5.8.2 | 5.8.2, rewritten | an act counts where it is at the where; not there, no act, no fork; the keeper's where is for the agreement's own acts | the same; sixth 6, 10; answer 14 |
+| 5.8.3 | 5.8.3, rewritten | at how many, K9's, every keeper by default, a count or a set; a keeper that cannot be reached, unchecked with evidence; a keeper service's answer labelled so | "Keepers: cross verification by default, a socket to lift it"; A6, A8; sixth 13; answer 13; "Rely when a relay dies: a proof, not one for the bytes" |
+| 5.8.4 | 5.8.4, rewritten | order by knots; the keeper gives no order, the clock time only | "No versions: the chain guards the end and forces knots" (09:15); sixth 9 |
+| 5.8.5 | 5.8.5, rewritten | an act that names a clock is anchored to it; provisional until anchored, not shown, "not yet anchored" | "An act that names a clock is anchored to it" |
+| 5.8.6 | 5.8.6 | refused only where a condition in time names no clock | the same (the lead's reading of 10:20) |
+| 5.9.1 | 5.9.1 | as P7 | |
+| 5.10.1 | 5.10.1 | as P7 | |
+| 5.10.2 | 5.10.2 | a filling read from the Terms its proof names; the keepers' answers and the fork clause go | "No versions: the chain guards the end and forces knots" |
+| 5.10.3 | 5.10.3 | "version" to Terms | the same |
+| 5.10.4 | 5.10.4 | as P7 | |
+| 5.10.5 | 5.10.5 | an offer stops taking new identities by its words or by its ending | B5 |
+| 5.10.6 | 5.10.6, rewritten | nothing that follows reaches a filling; a keeper that cannot be reached, unchecked with evidence | "Protect the unknown party is an Agreements principle" (26 November); A8; P7's 2 |
+| 5.10.7 | 5.10.7 | "version" to Terms; a later act that changes what she earned is her own assent to a new agreement | "No versions: the chain guards the end and forces knots" |
+| 5.10.8 | 5.10.8 | "and no trigger" goes; K1 answers whether the obligation is open | B15; B10 |
+| 5.11.1 to 5.11.9 | the same | "version" to Terms; "per keeper" to "as shown"; a contest's Terms in force or ended | "Nothing is updated: new acts" |
+| 5.12.1 | 5.12.1 | "update condition" to the agreement's own rules | "A fork is a fork" |
+| 5.12.2 | 5.12.2, rewritten | the three forks the text sees | A2 |
+| 5.12.3 | 5.12.3, rewritten | both tips stop; for two endings, the agreement stays in force | A2 |
+| 5.12.4 | 5.12.4, rewritten | the resolve, a Statement only; for two endings, under a power to resolve | A2; answer 16 |
+| 5.12.5 | 5.12.5 | Statements only; the judicial changes by the agreement's end | the same |
+| 5.12.6 | 5.12.6 | the branch of two endings | the same |
+| 5.12.7 | 5.12.7 | the three forks | the same |
+| 5.12.8 | 5.12.8 | rival resolves; "late" goes | the same |
+| 5.12.9 | 5.12.9 | "not as the next version" to "not as the act that counts, not as an ending" | the same |
+| 5.13.1 | 5.13.1 | `replaces` goes from the fields, `closing_pointer` joins | "The closing pointer: no longer valid, and it once existed" |
+| 5.13.2 | 5.13.2 | `relies_on` against `closing_pointer`; a reliance on an act whose where cannot be reached is evidence | the same; "Rely when a relay dies: a proof, not one for the bytes" |
+| 5.13.3 | 5.13.3 | by knots only; an anchoring places in time, not after | "The keeper's ordered record is a service, not the core"; "An act that names a clock is anchored to it" |
+| 5.13.4 | 5.13.4 | before or after coming into force, or the ending; "per keeper" goes | the same |
+| 5.13.5 | 5.13.5 | the clock only; "nothing later" an answer of absence | “"As far as I can see" is the honest answer” |
 
-5.7.3, written by M5 (a signer's line and the agreement's chain, both knots), is not in draft 26: the lead's reading of 10:07 sent it to this companion (section 6.7, item 3), where section 5 gives it under §5.7.
+### 9.2 The definitions of §3, and §0 to §2
 
-### 9.2 The definitions of §3 that changed or are new
+| Where | What P8 did | It rests on |
+|---|---|---|
+| §0 | the keeper, one or several with their socket; no versions; two protections; those who take part through a spot | sixth 18; "No versions: the chain guards the end and forces knots"; "A buyer named as a signer is a partner" |
+| §1 | what an agreement does is a cMIP's; the constraint rewritten: no server need remain for an agreement to be left | "Shares and how they move are the cMIPs'" (13:58); B21; sixth 17 |
+| §3, head | a definition says what a word means; the grammar rules are in §4 to §7 | the prompt's "only rules in §4 to §7" |
+| §3.1 | **Act** (never changed); **Agreement** (one Terms act, its Statements; sixth 10); **Statement**, resolve; **Payment** names the Terms | "Nothing is updated: new acts"; sixth 10 |
+| §3.2 | **Two classes**, two protections; **Known party** (a known party who fills a spot stays one; a buyer named as a signer a partner); **Unknown party**; **Spot**, **Fill**, **Rights**, **Receiver for an act**, **Shares**, **Power**, **Constitution**, **Buyer** | his 08:58; "A buyer named as a signer is a partner"; sixth 4; "Shares and how they move are the cMIPs'" |
+| §3.3 | renamed "Ending, closing and forks"; **Chain**; **Succession**; **Line**; **Ending condition**; **Ending**, **Ended**, **Dissolved**, **Standing obligation**, **Closing pointer** (new); **Pin**; **Valid**; **In force**; **Fork**; **Apply**; **Resolution**, **resolve**; **Set aside**; **Built on a tip**. Gone: **Version**, **Update**, **Gate**, **Late update**, **Never ended**, the resolving update | his entries of 28 November; "valid" kept (B19, his, open) |
+| §3.4 | **Shown after** by knots only; **Keeper** the stated where, a keeper service; **Anchoring** an act's own. Gone: **Keeper's record**, **Placed** | "The keeper's ordered record is a service, not the core"; "An act that names a clock is anchored to it" |
+| §3.5 | **Relay**: a keeper is a relay the Terms name; it may do more | "A keeper is a relay: lodge, relay, fetch" |
+| §3.6 | the answers: "late" goes; "per keeper" goes; **as shown** names how many keepers; **Not shown** and **Unchecked** reasons | “"As far as I can see" is the honest answer”; A6 |
 
-Definitions that draft 26 keeps as draft 25 has them ("D25, stays" in the trace, with "place" read as keeper and cross-references moved) are not listed. *Draft 25* is "new" where draft 25 had no such word.
+### 9.3 The fields of §4, and the tasks of §6
 
-| draft 26, §3 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
-|---|---|---|---|---|
-| Terms (3.1) | Terms | "There is no unsigned act: the author is a known party" (27 November); "Publishing the Terms is the publisher's assent" (27 November) | — | P3-1, his 20:50 |
-| Agreement (3.1) | Agreement | "There is no unsigned act: the author is a known party" (27 November) | — | — |
-| Counter signature (3.1) | Counter signature | "In force once pinned" (18 November) | — | 6.1 item 1; 6.7 row 1 |
-| The words (3.1) | new (N4) | "The words of Terms are a Text act" (26 November) | Q24 | — |
-| The set of acts (3.1) | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21 | 6.5 row 2; 6.6 row 1 |
-| Report, call (3.1) | Report, call | "Where three rules live" (17 November) | — | — |
-| Author (3.2) | Author | "There is no unsigned act: the author is a known party" (27 November); "The signer of a Terms act is an author" (27 November); "Publishing the Terms is the publisher's assent" (27 November); "Publishing the Terms is the publisher's assent" (27 November) | — | 6.5 row 1; 6.13; 6.14 C1/S; 6.15; 6.16 reading 4; P3-3, his 20:50 |
-| Known party (3.2) | new | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "The known parties of a version are the signers it names" (27 November) | — | 6.2 item 33; 6.13; 6.14 C14 |
-| Unknown party (3.2) | new | "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A filling gives no power" (27 November) | M15 | 6.14 F17/C10 (M15's clause gone); 6.16 reading 7; P5-7: the lead's answer 1 of 22:30 |
-| Two classes (3.2, its head paragraph) | new | "A filling gives no power" (27 November), his line of 18:47 | — | 6.14, "For the text, from his words of 18:47"; 6.16, the lead's reading 12 of 20:55; P3-33: reading 12 of 20:55 |
-| Fill, filling (3.2) | Fill, filling | "For the unknown party there is no update, only the agreement she signed" (27 November) | M15 | — |
-| Power (3.2) | Power | "Delegation is a leftover" (18 November); "A filling gives no power" (27 November) | — | 6.13; 6.16 reading 5 |
-| Spot, its sort (3.2) | Spot (its kind) | — | — | 6.13 |
-| Delegation | Delegation: gone | "Delegation is a leftover" (18 November) | — | — |
-| Version (3.3) | Version | "Who signs an update by default: the known parties" (26 November) | — | — |
-| Update (3.3) | Update | "Valid means in force: one gate for an update" (26 November); "The gate and the pin; a fork, not a race" (26 November); "An update the keeper never showed is no update" (27 November) | — | P5-5: his 22:30 |
-| Gate (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November); "An update the keeper never showed is no update" (27 November) | — | 6.2 item 31; P5-3: the lead's 22:45, 1 |
-| Pin (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November); "In force once pinned" (18 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 item 1; 6.6 row 4; 6.7 row 1; 6.14 C3, F4; 6.16 readings 1 and 2; P3-10, his 21:42; reading 2 of 20:41; P5-4: his 22:39 |
-| Valid, not valid (3.3) | Valid; Answers | "Valid and in force, two words, two jobs" (26 November) | — | — |
-| In force (3.3) | In force | "Valid and in force, two words, two jobs" (26 November) | — | 6.1 item 1 |
-| Fork (3.3) | Fork | "A fork is a fork" (27 November); "Two threads, two owners" (17 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.14 F7 |
-| Late update, late (3.3) | Late update | "Knots are knots: one reading, "shown after"" (27 November); "The gate and the pin; a fork, not a race" (26 November) | M5 | 6.6 row 4; 6.14 F4, C46b; 6.16 reading 3 |
-| Never ended (3.3) | Never ended | "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
-| Apply, no longer applies (3.3) | Apply | "Ana's month ends by the clock the agreement names" (27 November) | — | 6.8 row 1; P5-6: the lead's answer 1 of 22:30 |
-| Resolution, resolving update (3.3) | Resolve | "A fork is a fork" (27 November) | — | 6.13 |
-| Condition (3.3) | Condition | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
-| Triggered; join | no longer terms: gone (their notes in section 11) | "Only rules in the hashed text" (17 November) | — | — |
-| Knot (3.4) | Knot | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.3 G13.1 |
-| Shown after (3.4) | new (N7) | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 item 28 |
-| Keeper (3.4) | `place`, renamed (N2) | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November); "Two keepers named, both needed" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 item 4; 6.13 |
-| Keeper's record (3.4) | new | — | — | 6.4 row 2; 6.13 |
-| Placed (3.4) | new | "Two keepers named, both needed" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.13 |
-| Clock (3.4) | Clock | "Ana's month ends by the clock the agreement names" (27 November) | — | — |
-| Anchoring (3.4) | Anchoring | "Whose place counts; protect the unknown party, as a principle" (26 November) | M20 | 6.3 G1.4 |
-| Lodge, relay, fetch (3.5) | new | "Agreements gets an introduction" (27 November) | — | 6.4 row 3 (uploader) |
-| Client (3.6) | Client | "Signing an agreement relies on its words" (26 November) | — | 6.4 row 4 |
-| Answers (3.6) | Answers | "A fork is a fork" (27 November) | M5 | — |
-| Not shown (3.6) | Not shown | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "The place vouches for the chaining only" (26 November) | — | 6.7 row 1 |
-| Unchecked (3.6) | Unchecked | "A missing act stays unchecked: no door around it" (26 November); "A hand count is the client's choice" (26 November); "A resolve with nothing to resolve: "not shown", with the reason" (26 November), its line "Every refusal states its own reason" | — | 6.14 C29; P7-1: the lead's 23:55, 1 |
-| Invalid (3.6) | Invalid | "A condition in time with no anchor is refused" (26 November) | — | — |
-| Rejected | not an answer word | — | M5 | — |
-
-### 9.3 The fields of §4 that changed
-
-| draft 26, §4 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
-|---|---|---|---|---|
-| 4.1 the kinds of value | §3, "Each field holds one kind of value" | "The place vouches for the chaining only" (26 November) | — | — |
-| 4.1 the set of acts | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21, F12, F13 | 6.5 row 2; 6.6 row 1 |
-| 4.2 `authors` | §3.1 `authors` | "There is no unsigned act: the author is a known party" (27 November) | — | 6.5 row 1 |
-| 4.2 `body` | §3.1 `body` (the words' bytes) | "The words of Terms are a Text act" (26 November) | Q24, Q25 | 6.5 row 3 |
-| 4.2 `in_force` | §3.1 `in_force` | "Who signs an update by default: the known parties" (26 November) | M11, Q7 | 6.6 row 3 |
-| 4.2 `keeper` | §3.1 `place` | "The place vouches for the chaining only" (26 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | — | 6.16, "After P6": the socket, his |
-| 4.2 `condition` | §3.1 `condition` | "Who signs an update by default: the known parties" (26 November) | — | — |
-| 4.2 `calls` | §3.1 `calls` | "Where three rules live" (17 November) | — | — |
-| 4.2 `envelope`, `envelope_at` | §3.1, the same fields; their rules to Envelopes | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | — |
-| 4.2, 4.3 `resolves`, `continues` | §3.1, §3.2 | "A resolve with nothing to resolve: "not shown", with the reason" (26 November) | — | 6.6 row 1 |
-| 4.3 the report paragraph | §3.2 | "Where three rules live" (17 November) | — | — |
-| 4.4 One fault, one rule | §2's list of the cases of invalid, and §3's "One fault, one rule" | "A condition in time with no anchor is refused" (26 November) for case 8 | — | 6.5 rows 1 and 3 (cases 5 and 2); 6.10 row 3 (its own heading) |
-
-### 9.4 The tasks of §6
-
-| draft 26, §6 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
-|---|---|---|---|---|
-| the opening | §5's opening, cut | "Only rules in the hashed text" (17 November) | Q26 | 6.7 row 2 |
-| K1 Body | K1, changed | "The words of Terms are a Text act" (26 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November) | Q24, Q25 | — |
-| K2 In force | K2 | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3 |
-| K3 Power | K3 | no entry (the brief) | — | — |
-| K4 Update condition | K4, changed | "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November); "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
-| K5 Spot | K5 | no entry (the brief) | — | 6.8 row 1 |
-| K6 Control | K6, cut | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
-| K7 Kind | K7 | no entry (the brief) | — | — |
-| K8 Data | K8 | no entry (the brief) | — | — |
-| K9 Keepers | new (P6) | "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | — | 6.16, "After P5" and "After P6": the socket, his since 23:52 to 00:00 (the lead's 23:33 before) |
-| 6.1 Modules | §5.3, its history and "Was" column out (section 11) | "Only rules in the hashed text" (17 November) | — | — |
-
-COUNTED (`trace10.py`): 68 rows in 9.1, one for each numbered rule of draft 26, as M7's closing count has them (§5.1: 5; §5.2: 3; §5.3: 2; §5.4: 5; §5.5: 7; §5.6: 6; §5.7: 2; §5.8: 6; §5.9: 1; §5.10: 8; §5.11: 9; §5.12: 9; §5.13: 5); 38 rows in 9.2; 12 in 9.3; 11 in 9.4 (K9 added by P6); 129 in all. Every heading in the ledger column was matched by the script against the ledger's own bold headings on main.
+| Where | What P8 did |
+|---|---|
+| §4.2 | `replaces`, `agreement`, `resolves`, `continues` go; `closing_pointer` new (its name and key the codemeister's); `parties`, `authors`, `body` required of every Terms act; `powers` without `replaces`; `keeper` by its identifier as a relay (sixth 11), K9 "at how many"; `condition` the ending condition; `previous` none for a Terms act |
+| §4.3 | `agreement` the same act as `terms`; `kind` resolve the act that resolves a fork; "What a resolve carries", a Statement only |
+| §4.4 | case 1 loses the fields that went; case 8 "names no clock the Terms state" |
+| §6, head | what an agreement does is always a cMIP's answer; the guarantees beneath (the lead's reading of 13:58, to check) |
+| K1 | whether an obligation toward a filling's holder is open |
+| K2 | the update clause goes |
+| K3 | sort `assent` reaching a closing pointer (B11); sort `replaces` goes |
+| K4 | the ending condition: "Is the agreement ended by these acts?" |
+| K5 | the role as the Terms state it |
+| K7 | a kind that ends an agreement, or gives a power |
+| K9 | "Is this act at enough of the keepers named?": a count or a set, never an order; a keeper service's own answer (answer 13; sixth 13) |
+| §6.1 | the judge changed only by the agreement's end; the keepers' records go |
+| §7 | the closing pointer's field (in place of "which field of a first act names an earlier agreement"); how an act is anchored to a clock; the clock's open item cites 5.8.5 |
 
 ## 10. The table from draft 25's numbers to draft 26's
+
+*P8: the table below is as P7 left it, its draft 26 column draft 26's numbers before P8. Draft 26 as P8 left it keeps every number but P7's 5.5.1 to 5.5.7 (rewritten as 5.5.1 to 5.5.6) and the rules section 9.1 marks rewritten; a draft 25 rule that P7's table sends to 5.5.1 to 5.5.7 is, since P8, removed with the model or carried into 5.5.2 (the ending condition) as section 9.1 says.*
+
+<!-- before P8 -->
 
 **In plain words.** Every one of draft 25's 124 rules (its 72 numbered clauses and 52 lettered ones, as the brief counts them), and where it now is: a rule of draft 26, another text, this companion, or nowhere. Then the 29 that left draft 26 altogether, each with draft 25's text and where it went.
 
@@ -1859,7 +1714,11 @@ Each with where it went, the entry that sent it, draft 25's text unchanged (its 
 > **Protects.** The baker, and whoever holds the baker's rights after her, as the envelope's chain gives it, whose work no stranger's Terms can rule; whoever agreed with the holder of the moment, and every payer under those Terms, whom a later sale does not undo; whoever bought the baker's rights, whom the envelope itself names as their holder, and who needs her for nothing in Terms that cite the transfer, and for no update the update condition she signed answers valid without her; whoever is sold rights already sold, who is shown the second sale as a fork in the envelope's chain; the buyer, who can check before paying, and is shown every bake of the same work the verifier holds; and whoever made the work, who can contest a copy and is not outranked by software that picked.
 
 
+<!-- end before P8 -->
+
 ## 11. Archaeology
+
+<!-- before P8 -->
 
 "Those old drafts should be buried deep, only for people who wish to do some archeology…" (he, "The place vouches for the chaining only", 26 November, after the renaming of "place" to keeper; the lead's line: "The old drafts are archaeology: kept, buried deep, not read for what words mean now.")
 
@@ -2245,6 +2104,629 @@ For the encoding session. In plain words: this text says what each field means a
 17. **Vectors for a late update** (G4.7). No new field: lateness is read from the namings already in the bytes. The vectors must hold, for the same two updates, sets of acts that show the order by knots, by the place, and by neither, so that one builder's "late" and another's "fork" are compared on the same acts.
 18. **Vectors for the baker's rights** (G14.2). The holder at the act Terms cite is read from the acts of the envelope's chain handed to the verifier (item 13), and "bound by them" from the assents and the update condition already in the bytes. The vectors must hold, for Terms that name an envelope: Terms that cite the bake, with the baker as a party, before and after a transfer is held; Terms that cite the transfer, with the new holder, with the baker named and with her dropped; a version made without the holder's assent that the update condition the holder signed answers valid; Terms that cite the bake and are made after a transfer, late by knots, late per place, and late by neither; a thief's Terms that cite a point where he held nothing, before and after a later transfer to him; an `envelope_at` that names an act of another envelope's chain; a double sale, a fork in the envelope's chain, with that layer's answer of a holder and with none; and a verifier that lacks an act of the chain; each with the answer it should give (shown, late, not shown, invalid, unchecked), so that two builders read the holder at the time and "bound by them" alike. Draft 23's vectors for the current holder are not needed.
 19. **The field `envelope_at`** (section 3.1; G14.1). New in draft 24. How it is written: one fingerprint, of an act of another layer (the envelope's chain), so the encoding must say over which bytes that fingerprint is taken, as for an envelope (item 5); that it is required exactly when `envelope` is present, and that an act with one and not the other is rejected; how a verifier tells that the act it names is of the chain of the envelope named (section 8.1, item (4)), since one that is not makes the Terms invalid; and its name, which is the MOR lead's to change.
+
+### 11.7 The scenarios as P7 left them
+
+**In plain words.** Each scenario is a short story told in acts, in the order they are signed, with what a verifier answers under draft 26 at each step and which rule gives it. A verifier can be run on each: the acts are the input, the answers the expected output. Where an answer turns on something draft 26 leaves out, the scenario is told up to that point and says where it stops; nothing is chosen.
+
+**How to read it.** *V1, V2, V3* are versions (Terms acts) of one agreement; *U1, U2* updates of one version; *A(x, V)* is x's assent to V; *CS(x)* x's counter signature. "Names" means a fingerprint in a field (a knot, 5.13.1). Each answer is given with its word in bold, its rule, and its qualifier (**as shown**, **per keeper**, **per clock**). Unless a scenario says otherwise: the Terms name no keeper, no clock and no update condition; the parties named as signers are the known parties (§3.2); each assent names in `previous` its signer's last act within the agreement (5.7.1); the verifier holds every act listed and every cMIP named. The names (Ana, Ben, Carla) are the ledger's. The expected answers are the scribe's reading of draft 26's rules (INFERRED, each with its rules); none is a vector, and none changes one.
+
+The scenarios are of three sources: the ledger's (8.1 to 8.7), the impact sheet's twenty-two new vectors by its line (8.8 to 8.16), and the five blind readers' cases, M4 to M8 (8.17 to 8.21). The impact sheet was written before draft 26 and covers the exchanges up to "Wave two: check, then attack, then draft 26" (26 November); each of its expected answers is re-read here against draft 26, and where draft 26's answer differs from the sheet's, both are given.
+
+#### 8.1 Ana, Ben and Carla: a withdrawal against the completing assent
+
+*Source*: "What a race stops" (18 November: "Ben's signature completing Terms while Carla takes back hers, with nothing ordering the two"; he: "Agreed, Carla is the monkey wrench that gets it all stuck"); "In force once pinned" (18 November); "A fork is a fork" (27 November). The ledger records that the MOR lead "retold it with Ana, Ben and Carla" in "The gate and the pin; a fork, not a race" (26 November); the retelling's own acts are not in the ledger, so the acts below are the 18 November case's.
+
+*Acts*: (1) V1, a first version: parties Ana, Ben and Carla, each named as a signer; author Ana; no `in_force`. (2) A(Ana, V1). (3) A(Carla, V1). (4) A(Ben, V1), naming none of Carla's acts. (5) CS(Carla), `terms` V1, its `previous` naming (3); it names nothing of Ben's.
+
+*Answers*:
+- After (4): the assents V1's default asks for are present (5.4.1, first sentence: every party named as a signer); V1 is not yet in force: **not shown**, no order being shown, since no party has acted after the completion (5.4.1, the pin), **as shown**.
+- After (5): with no keeper, only knots order (5.4.5, The order). (5) is not shown after (4), so it is not late. Counting every act but those shown after (5), (4) is still counted and V1 would come into force, so (5) is not shown to have come first. With every act counted, V1 would come into force. So (5) and the completion are a **fork** (5.4.5; 5.12.2: "Terms coming into force against a counter signature"): neither takes effect, V1 is not in force, and the verifier shows both and chooses neither (5.12.1).
+- *Variant*: (5) names (4) (Carla had seen Ben's assent). Then (5) is shown after the completion: it is **late**, cancels nothing, and pins for Carla (5.4.1: "a counter signature so shown is late, and cancels nothing"); V1 is in force once Ana and Ben have also acted after the completion (5.4.1), **as shown**.
+- *Variant*: V1 names a keeper K. Then K's positions settle it: (5) changes nothing where K places it after the completion, and cancels where before (5.4.5, The order), **per keeper**; V1 is in force once K shows the completing assents (5.4.1).
+
+*Stops*: how the fork of step (5) is resolved in bytes is not given: 5.12.4 gives the form of a resolving update "for a fork of a line only" (item 7, left out). Whether Carla's counter signature cancels once such a fork is resolved is "as the resolver decides" (the lead's reading of 09:47, section 6.6, item 6); draft 26 has no rule for it.
+
+#### 8.2 Ana's month
+
+*Source*: "Ana's month ends by the clock the agreement names" (27 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November: "If she bought for a month of service to an LLM for example, the deal is valid a month.").
+
+*Acts*: (1) V1, a first version by the seller S, named as a signer and author; a role (say of kind fits, its `what` and its K5 cMIP); `in_force` (required, 5.4.2); `clock` C; a K1 cMIP whose words give a buyer one month. (2) A(S, V1), and acts that put V1 in force and pin it (5.4.1). (3) A(Ana, V1), which earns a filling by the K5 cMIP's proof. (4) V2, `replaces` V1, signed by S alone, naming clock C2 and dropping the role. (5) Acts of S that pin V2.
+
+*Answers*:
+- (3): Ana's filling is **shown**, with its proof and V1 named (5.10.2, 5.10.7), **as shown**; her assent binds her, and binds S to her, as V1 says (5.4.3).
+- (4) and (5): V2 is **valid**, by default: its only known party, S, signed (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1), **as shown**. Ana is not asked (5.5.5(a)).
+- V2 does not reach Ana's filling: for a filling no later update exists; V2 exists for the agreement (5.10.6). Her filling is still read from V1, its role and its cMIP as V1 states them, though V2 drops the role (5.10.2).
+- Whether her month still applies is the K1 cMIP's answer, on V1's clock C, never V2's C2 (5.10.8, 5.8.5; the lead's reading of 13:20, section 6.8): the verifier shows it as that cMIP's, with its ground, **per clock**; without that cMIP, **unchecked** (5.10.8).
+- *Variant*: V1 names no clock. Then no term in time can be read from V1, and a verifier shows nothing about that term (5.10.8, 5.8.6; wave five, the lead's reading C27); and where V1's K1 cMIP declares, in its own published text, that it needs a clock, V1 is **invalid**, a verifier reading the declaration from that cMIP's act, and **unchecked** where it lacks the cMIP (5.8.6; §4.4, case 8).
+
+*Stops*: which act the month counts from ("the anchoring of the purchase": the assent, the payment, the proof) is item 12, left out; the cMIP that reads the words answers it, and draft 26 names no act.
+
+#### 8.3 Version 3 naming version 1
+
+*Source*: "A late version 3 is rejected" (26 November: "Version 3 is the one the network needs to reject"; the lead's line: "a version 3 that names a version already replaced is rejected once the replacing version is in force").
+
+*Acts*: (1) V1, in force and pinned, parties Ana and Ben. (2) V2, `replaces` V1; A(Ana, V2), A(Ben, V2). (3) Acts of Ana and Ben after (2), pinning V2 (5.5.1(b)). (4) V3, `replaces` V1; A(Ana, V3) and A(Ben, V3), each naming in `previous` its signer's act of (3), as in the rerun ("each maker signed version 2 and then version 3 in their own line", the lead's line).
+
+*Answers*:
+- V2: **valid**, by default (5.5.7(e)), and in force (5.5.1), **as shown**.
+- V3: it passes V1's gate (5.5.4: L passes O's gate), and no choice of assents enough for V3 to pass V1's gate avoids an act shown after acts enough for V2 to pass V1's gate (5.5.4(a), as wave five has it: lateness is read against the gate, never against V2's own pin): V3 is a **late update**, answered **late**, naming 5.5.4 and the acts that show it, **as shown** (5.5.4(c)). It replaces nothing and is no tip; which Terms are in force is answered as if V3 were not there: V2 (5.5.4(c)). An assent to V3 binds no one; nothing built on V3 counts: a late update is no tip and gives no previous (5.5.4(c)).
+- "Rejected" is not the answer: draft 26's word is **late** (§3.6; the settled note's M5). Whether "rejected" is a verifier's answer for a late update is item 24, left out.
+- *Variant*: V1 names a keeper K. Lateness is read per K, from the positions at which each passes V1's gate (5.5.4(b)), **per keeper**; knots show V3 late against K only as K's contradiction (5.5.4(c), 5.8.4).
+- *Variant*: the chain that would show V3 late needs an act named in a field and not held. Whether V3 is late is **unchecked**, and so is which Terms are in force from V1 on (5.5.4(c), 5.13.3).
+- *Variant*: nothing shows V3 after V2's acts (Ana and Ben signed V3 naming only their V1 acts). V2 and V3 are a **fork** whose shared act is V1 (5.5.4), and V1 stays in force (5.5.4(e)).
+
+#### 8.4 Two keepers that disagree
+
+*Source*: "The place vouches for the chaining only" (26 November, 17:49: he, "Two disagreeing has its value though"; the lead's line: "where they disagree there is none ("not shown", with that reason), and the disagreement is kept as evidence"; "a forced deadlock like a fork", the lead's).
+
+*Acts*: (1) V1 in force, naming keepers K1 and K2, and an update condition "any two of three known parties" (Ana, Ben, Carla). (2) U1, `replaces` V1, with A(Ana, U1), A(Ben, U1). (3) U2, `replaces` V1, with A(Carla, U2) and A(Ben, U2), Ben's naming his own last act before (2): Ben's two assents name the same `previous`. (4) K1's records place (2) before (3); K2's place (3) before (2).
+
+*Answers*:
+- About the order of U1 and U2: **not shown**, for the answers that rest on it, the keepers the Terms name disagreeing on it; both keepers named and each one's records shown as evidence; answers that rest only on what they agree on stand (5.8.3, 5.5.5(d); wave five, the lead's reading C46d).
+- Ben's two assents name the same `previous`: a **fork** in Ben's line, whatever the keepers show (5.7.2). He is a known party who assents to two rival updates of one version, so neither of his assents counts for either gate until his line is resolved (5.5.5(a), 5.7.2; the lead's reading of 14:33, section 6.10). U1 then has Ana's assent and U2 Carla's: neither has two of three counted, the condition answers **not valid** for each, on the assents counted (5.5.7(c)), and neither passes the gate. V1 stays in force, **per keeper** (5.5.1, 5.5.3).
+- *Variant* without Ben's double assent: the update condition asks any one of the three, and Ben signs U1 only. U1 (Ana, Ben) and U2 (Carla) both pass V1's gate; neither is shown after the other, the keepers disagreeing, so they are a **fork** (5.5.4), shown with the keepers' disagreement; V1 stays in force (5.5.4(e)).
+- *Variant*: K1 shows U1's assents and K2 shows nothing yet. Every keeper named is needed (5.8.3, wave four): U1's order is **not shown**, per keeper, with the reason that K2 does not yet show it; V1 stays in force (5.5.1(b), 5.5.5(d)). Before wave four this was item 5, and the scenario stopped here. *Re-read by P5*: the split of the pin is withdrawn (his 22:36 and 22:39; section 6.16). Every keeper V1 names pins U1, whoever signs it, and its gate counts only the assents both keepers show (5.5.1(a), (b)): K2 shows none, so U1 is no update of V1 for now: **not shown**, per keeper, K2 named as not yet showing it (5.8.3); V1 stays in force. *As P3 left it*: the same answer, U1 being no update every known party signs. *Re-read by P6* (his 23:22–23:28): V1 names no cMIP beside its keepers, so every keeper named is needed (5.8.3); the answers above stand. With C a named condition, the gate's cMIP is asked on the assents both keepers show and its answer passed on per keeper, U1 **not shown** as in force (5.5.7(c); the lead's 23:22, 1).
+
+*Stops*: how a verifier hands a cMIP that counts signatures the assents that count, leaving out Ben's forked ones, is not said (For M11, below).
+
+#### 8.5 The silent signer
+
+*Source*: "The gate and the pin; a fork, not a race" (26 November): the lead's answer to "How is this then enforced?": a malicious client can "withhold its knot (the silent signer: not shown, cured by naming a place)". Its "Not answered" line: "whether draft 26's warning says plainly that Terms naming no place depend on every needed signer's knots".
+
+*Acts*: (1) V1, a first version, Ana, Ben and Carla named as signers, no keeper. (2) A(Ana, V1), A(Ben, V1), A(Carla, V1). (3) Later acts of Ana and of Ben within the agreement, each naming its own assent and, by `answers` or `relies_on`, the other two assents. (4) Nothing more from Carla.
+
+*Answers*:
+- V1's assents are present (5.4.1, first sentence), and it is **not shown** as in force: no order is shown, since Carla, in whose name an assent is counted, has made no act shown after every one of those assents (5.4.1), **as shown**. A missing act never becomes a yes (5.13.3).
+- *Variant*: V1 names a keeper K. V1 is in force once K shows the three assents, at the positions K gives (5.4.1), **per keeper**; Carla's silence changes nothing. Where keepers are named, only they pin (5.4.1). *Wave five*: the lead's reading 2 of 20:41 (a first version every party signs pinned by their knots whatever keeper is named), written by P3 and withdrawn at 22:45 (section 6.16), changed nothing here: Carla's knot is lacking. K's answer is the one given (5.4.1).
+
+#### 8.6 The stall
+
+*Source*: "A missing act stays unchecked: no door around it" (26 November; Fable 5.1's break 4, "a `previous` nobody holds"). He: "I think yes. I don’t see the need to open a door around it. But feel a risk", and "No, I meant a risk of opening a door". The lead's line: "The stall is the forced deadlock: only someone the update condition accepts can make it, the agreement resolves it as a fork, and a keeper prevents it in advance."
+
+*Acts*: (1) V1 in force, Ana and Ben, no keeper. (2) U, `replaces` V1, A(Ana, U), A(Ben, U); Ben's assent names in `previous` an act the verifier does not hold. (3) Later acts of Ana and Ben that would pin U, Ben's chain running through the act not held.
+
+*Answers*:
+- Ben's assent counts, and his line is **unchecked** before it (5.7.1). U is **valid**, by default, where both assents are held (5.5.7(e)).
+- Whether U is pinned needs a chain through the act not held: **unchecked** (5.13.3: "never a yes, and never a no. No grammar rule goes around it"), and so is which Terms are in force from V1 on, the verifier naming V1 as the last version it has established (5.5.4(c), 5.5.5(e)).
+- *Variant*: V1 names a keeper K. U is pinned once K shows its order (5.5.1(b)); the missing act stops nothing K shows, **per keeper**. *Re-read by P5*: K alone pins U, whoever signs it (5.5.1(b)); the knots through the act not held are not asked, and the answer stays **per keeper**. (As P3 left it, U, signed by every known party, was also pinned by their knots, and that way was **unchecked**: withdrawn, section 6.16.)
+
+#### 8.7 The double assent
+
+*Source*: the lead's reading of 14:33 on item 9 (section 6.10): "a known party who assents to both rival updates forks her own line (5.7.2), and in a fork neither tip takes effect ("A fork is a fork", 27 November; draft 25's G12.2, both tips stop). Neither assent counts for either gate until her line is resolved, by a resolving act in her line as §5.12 says." It answers M7's blind reader's first point (the trace, M7's rows to check, 4).
+
+*Acts*: (1) V1 in force, known parties Ana, Ben and Carla, no keeper, an update condition C2 "any two of three" (its cMIP held). (2) U1, `replaces` V1; A(Ben, U1). (3) U2, `replaces` V1; A(Carla, U2). (4) A(Ana, U1) and A(Ana, U2), both naming in `previous` Ana's last act before them. (5) R, a Statement of kind `resolve` by Ana, `previous` that same act, `resolves` both her assents, `continues` A(Ana, U1). (6) Acts that pin U1 (5.5.1(b)).
+
+*Answers*:
+- After (4): Ana's line has two acts naming the same `previous`: a **fork** for Ana (5.7.2), **as shown**; both tips stop (5.12.3). Neither of her assents counts for either gate until her line is resolved (5.5.5(a), 5.7.2). So U1 has Ben's assent counted, U2 Carla's: C2 answers **not valid** for each, on the assents counted (5.5.7(c)), so neither passes the gate, and neither is a tip of a fork of Terms; V1 stays in force (5.5.1, 5.5.3), **as shown**.
+- After (5): R is an update of the shared act, signed by Ana, naming every tip and one in `continues`: it resolves her line (5.12.4), **shown**, naming 5.12.4 (wave five, P1-48, the lead's reading C39: "A resolving update in one signer's line that resolves is answered **shown**, naming this rule"; before, the scribe's word). A(Ana, U1) counts as the next act of her line; A(Ana, U2) is **set aside** (5.12.4). Now U1 has Ana's and Ben's assents: C2 answers **valid** for it (5.5.7(d)), named with its ground; U2 has Carla's only: **not valid** (5.5.7(c)).
+- After (6): U1 is in force once its order is shown (5.5.1(b)), **as shown**; until then **valid**, and **not shown** as in force, no order being shown.
+- *Without the ruling* (the other reading, section 6.10): each of Ana's assents would count for whether its Terms tip was signed (5.12.3's one thing), both updates would pass C2's gate, and U1 and U2 would be a **fork** of Terms (5.5.4), V1 staying in force until a resolving update of Terms.
+
+*Stops*: where Ana's second assent names her first in `previous` (no shared `previous`), 5.7.2's test sees no fork in her line, while the ruling reads every double assent as one; and how the verifier leaves her forked assents out of what C2's cMIP is given is not said. Both are listed for M11.
+
+#### 8.8 The impact sheet's line 1: a late version 3, three vectors
+
+*Source*: the impact sheet, line 1 ("Only a lacking act that could carry a knot leaves "late" unchecked"); "A late version 3 is rejected" (26 November). The acts are 8.3's, with one more entry in V3's `relies_on`.
+
+1. *V3's `relies_on` names a Text act held beside it.* The sheet: **late**, as shown, where verifier 2 gives unchecked. Draft 26: **late**, **as shown** (5.5.4(a), (c)). The Text act is held and is a knot (5.13.1); nothing a chain needs is missing.
+2. *The same with the work declared as a piece* (a fingerprint the verifier holds as no act). The sheet: **late**, as shown. Draft 26: **late**, **as shown**, where the makers' own lines show it: the chain that shows V3 late does not run through the piece (5.5.4(a)), and "shown after" proves after whatever is missing (5.13.3). Draft 26 gives a verifier no way to be told that a fingerprint is no act (the impact sheet's Q1); no answer here turns on it.
+3. *The same with a private act held without its key in `relies_on`.* The sheet: **unchecked**, "since it could carry a knot". Draft 26: **late**, **as shown**, where the makers' own lines show it, since no act left unread can undo an "after" already shown (5.13.3); **unchecked** only where the one chain that could show it runs through the private act (5.5.4(c)). The two answers differ; listed under rows to check.
+
+#### 8.9 Line 6: a resolve with nothing to resolve, two vectors
+
+*Source*: "A resolve with nothing to resolve: "not shown", with the reason" (26 November). He: "Agreed. It’s a different reason for a “sorry can’t do” and it’s always good to state why".
+
+1. *A Statement of kind `resolve` in an unforked line*: its `resolves` names one act of the signer and no rival. **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4). It is an act of the signer's line like any other, and may itself be a tip (5.12.4).
+2. *A Terms act written as a resolving update where there is no fork* (`replaces` V1, `resolves` naming U1 and nothing rival, `continues` U1). **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4: what it names "are not the tips of a fork in its own line"). Since it names V1 in `replaces`, it is an update of V1 beside U1, and where both pass V1's gate and neither is shown after the other, the two are a **fork** (5.12.4: "a fork is not hidden by adding the field"). This answers the sheet's Q10.
+
+#### 8.10 Line 7: a buyer's assent to a replaced version, two vectors
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November). He: "What are the terms of version 2? Would be my answer".
+
+*Acts*: V2, an offer with a role, in force; A(Ana, V2), earning a filling; V3 replaces V2, pinned.
+
+1. *With the buyer's K5 cMIP held*: her assent is **shown**, as one that earned a filling under a version since replaced, V2 named (5.4.3); her filling **shown** with its proof, V2 named (5.10.2, 5.10.7).
+2. *Without it*: who fills the spot is the K5 cMIP's; the verifier lacks it: **unchecked** (§3.6, 5.10.2).
+
+#### 8.11 Line 8: protect the unknown parties, three vectors
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November: "Protect the unknown parties."); "Who signs an update by default: the known parties" (26 November).
+
+1. *An offer with a filled role and no update condition, updated by its maker alone*: **valid**, by default: the maker is the only known party (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1).
+2. *The filler, after a later version that a named update condition let through*: she is **not shown** as bound by it: no update binds anyone through an unknown party's filling (5.6.1(c), 5.10.6); her filling stays **shown** under its own version (5.10.7).
+3. *An offer whose K5 cMIP is lacking, an outsider's assent to an update held, no update condition*: **valid**, by default, once the maker's assent is held, where verifier 2 answers unchecked: the default asks the known parties only, and who fills a role does not enter it (5.5.5(a)). The outsider's assent makes no one a party (5.5.5(a)).
+
+#### 8.12 Line 9: G10.6(b) goes, one vector
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November), its line "G10.6(b) goes"; he: "Yes, it was a bad idea. It’s the “let me drown you in terms updatable unilaterally” nightmare we already live under".
+
+1. *A version whose update condition answers valid for a later version that changes what buyers bought*: the later version is **valid** under that condition (5.5.7(d)) and replaces once pinned, for the agreement; for the buyer's filling no later update exists (5.10.6), and the update condition is never asked about a filling (5.5.7). Her filling: **shown**, with the version it was earned under, and no later version named as changing it (5.10.7).
+
+#### 8.13 Line 10: her own assent on a later version, one vector
+
+*Source*: the same entry, its line "G10.6 comes back with (a) only"; "A power given binds its giver" (18 November) and the ruling on G5.6(f) (section 6.3).
+
+1. *The holder of a filling assents, in her own name, to a later version that changes what she earned*: **shown**: the verifier names, with her filling, the version it was earned under and that later version, with her assent (5.10.7). Each later version exists for the agreement; it binds her by her own assent (5.6.1(a); 5.10.6). Made for her by an agent under a power she gave in an act of her own, the same, with that power named (5.10.7, 5.6.5(f)); her own assent counts "whether or not it is counted for the later version" (5.10.7, wave five, the lead's reading F9/F10/C24). A power the version carries, given by its known parties, is not one she gave (5.6.1(b), 5.10.7; scenario 8.27).
+
+#### 8.14 Line 16: the set of acts, five vectors
+
+*Source*: "One way to name a set of acts, in Agreements" (26 November); the settled note's M21, F12, F13 (the lead's readings). The bytes are encoding 3's, whose label and joining are open (encoding 3, section 11, items 1 and 2).
+
+1. *Two ids in either order*: one value (§4.1: "sorted").
+2. *An id given twice*: the same value as once (§4.1: "repeats dropped").
+3. *One id*: a value that is not the id itself (§4.1: "hashed with a label for a set of acts").
+4. *The empty set*: "the label and no members" (§3.1, §4.1); how its value is written is open (§7, "The empty set").
+5. *An act with a set's value in `relies_on`*: draft 26 gives no field the set form ("in this text none does", §7). A set's value and an act id are both 32 bytes, so the act passes as an Agreements act, and the entry reads as the fingerprint of an act not held; a chain that needs it is **unchecked** (5.13.3). The scenario stops there for the set: no grammar field holds a set's value, a cMIP's parameters may (the lead's reading C36/C45/F14, section 6.14; encoding 3, section 3), so the entry is read as an act id, which no act held has. The vectors of 1 to 4 wait on the label, the joining and the empty set, which the codemeister proposes and encoding 3 writes before any vector (encoding 3, section 11, items 1 and 2).
+
+#### 8.15 Line 18: one gate for an update, three vectors
+
+*Source*: "Valid means in force: one gate for an update" (26 November), as "The gate and the pin; a fork, not a race" (26 November) and "Valid and in force, two words, two jobs" (26 November) changed it: the pin is back.
+
+1. *V2, valid by a named update condition, its own `in_force` answering no*: the `in_force` answer is left unread in an update, and the verifier says so (5.2.3, 5.4.2); V2 is **valid** (5.5.7(d)) and replaces once its order is shown (5.5.1); until then **valid**, and **not shown** as in force. The sheet's "it replaces" is draft 26's only with the pin.
+2. *A late update shown by knots, where the update that came first is valid and not in force by its own rule*: **late**, **as shown**, where acts enough to put the first through V1's gate are shown before it (5.5.4(a): lateness is read against the gate, never the pin, wave five); its own `in_force` is not read (5.2.3).
+3. *An update carrying its own `in_force`*: its answer on coming into force is left unread, the verifier saying so (5.2.3); where the update names a role, the field is required and read for who fills it (5.4.2). This answers the sheet's Q7 as the settled note's M11 and Q7 narrowed it (the lead's reading of 09:47, section 6.6).
+
+#### 8.16 Line 19: the words of Terms, two vectors
+
+*Source*: "The words of Terms are a Text act" (26 November). He: "Text comes first as a rule since agreement needs to point to it".
+
+1. *Terms whose `body` names a Text act handed beside them*: the words are a Text act; nothing is found against the Terms under 5.2.2. Were the act `body` names held and not a Text act, the Terms would be **invalid** (5.2.2; §4.4, case 2); a Text act invalid under Text's own grammar rules is no Text act here; were it not held, or held and not opened, whether the Terms are invalid under 5.2.2 would be **unchecked**, with a note of what is lacking (5.2.2, wave five, the lead's readings F11 and C16/F11).
+2. *With 8.8, that Text act named also in a late update's `relies_on`*: **late**, **as shown** (5.5.4); the Text act is one more knot (5.13.1), older than every act of the case, and changes no order.
+
+#### 8.17 M4's blind reader: one keeper, a buyer, a late version 3
+
+*Acts* (the trace, M4's blind reader): V1 signed by two known parties, naming keeper K and no update condition, a buyer having filled a role under it; V2 signed by the two known parties only, lodged at K and shown there after V1's coming into force; V3, naming V1, shown by K later than V2.
+
+*Answers*: V2 **valid**, by default (5.5.7(e)), pinned per K (5.5.1(b), 5.5.5(d)), **per keeper**, K named. The buyer is not asked (5.5.5(a)); V2 does not reach her filling (5.10.6), which stays **shown** under V1 (5.10.7). V3 is a late update: **late**, **per keeper** (5.5.4(b), (c)). These are the blind reader's answers; draft 26, as edited, gives the same. *Re-read by P5*: K pins V2, whoever signs it, and its gate counts the assents K shows (5.5.1); V3's lateness is **per keeper** alone: with K named, knots do not show it late (5.5.4(a)). (As P3 left it, V2 was also pinned by its signers' knots, and V3 also late **as shown**: withdrawn, section 6.16.)
+
+#### 8.18 M5's blind reader: two keepers, a power, a month in the words
+
+*Acts*: Terms in force name two keepers and no clock; P gave A a power to sign for her; the two keepers give different orders for two acts; the words say "open for one month".
+
+*Answers*: P is bound by what A signed where P's own signature is on the version that gives the power, the version `under` names, P is a known party of that version, and its rule says yes (5.6.1(b), wave five); **unchecked** where the rule's cMIP is lacking (§3.6). About the order: **not shown** for the answers that rest on what the keepers disagree on, both named, each one's records shown as evidence; answers that rest only on what they agree on stand (5.8.3, wave five). About the month: where no cMIP the Terms name declares that it needs a clock, the time is only in the words, and the verifier gives no answer of these grammar rules about it (5.8.6); a reader's own clock gives only that reader's answer (5.8.5). Where one such cMIP declares the need, in its own published text, the Terms are **invalid**: they name a keeper and no clock, and a keeper is not a clock (5.8.6); a verifier that lacks that cMIP answers **unchecked** for 5.8.6 (wave five).
+
+*Stops*: whether A, who signed for P, is bound by that act was carried for Nobody, allegedly, and closed in wave four (scenario 8.26: not by the act, as an act of A's own); whether the two acts the keepers order differently are a fork is item 8.
+
+#### 8.19 M6's blind reader: Ana's month, her role dropped
+
+*Acts*: Terms in force name a clock; Ana fills a role under V1, whose words give her a month; the known parties sign V2, in force, which drops her role; three weeks have passed on the clock.
+
+*Answers*: Ana's filling is **shown**, tied to its proof and to V1, with exactly V1's rights; whether it still applies is the K1 cMIP's answer, **per clock** on V1's clock, **unchecked** without that cMIP (5.10.7, 5.10.8). V2 does not reach it (5.10.6); her filling is still read from V1's role and cMIP (5.10.2). The known parties are bound to her by V1, for as long as its words say (5.4.3, 5.10.6).
+
+*Stops*: whether her spot still takes new identities once V2 has no role ("asks nothing" or unchecked) is item 29; from which act the month counts is item 12.
+
+#### 8.20 M7's blind reader: two rival updates, and a resolve Statement
+
+*Acts*: V1 in force, no keeper, no update condition; U1 and U2, each naming V1, each signed by every known party, neither naming the other; a buyer filled a role under V1 before; then a Statement of kind `resolve` by one known party naming both, U1 continuing.
+
+*Answers*: as M7's blind reader read it, before the 14:33 reading: a **fork** of Terms, both tips stopped, V1 in force (5.5.4(e), 5.12.3); the resolve Statement resolves nothing (a fork of Terms is resolved only by a Terms act naming V1 in `replaces`, signed by every known party by default, 5.12.4): **not shown** as a resolving update, with the reason, and the fork stands (5.12.7); the buyer's filling **shown** under V1 (5.10.2, 5.10.6). *Under draft 26 as edited*: each known party assented to both rivals; where each one's two assents name the same `previous`, each one's line forks (5.7.2; see 8.7's stop), and neither of their assents counts for either gate until their line is resolved (5.5.5(a)): neither U1 nor U2 passes the gate, and there is **no fork of Terms**; V1 stays in force. The resolve Statement, signed by one known party, resolves that party's own line if its `previous` is the act both their assents name (5.12.4), answered **shown**, naming 5.12.4 (wave five, the lead's reading C39); the other parties' lines stay forked, and U1 still lacks their counted assents. The answer word changes from **fork** (of Terms) to **fork** (of each signer's line), and V1 is in force under both.
+
+*Stops*: the case did not give the resolve Statement's `previous`, on which whether it resolves its signer's line turns (M7's note).
+
+#### 8.21 M8's blind reader: a Terms act the checker reads
+
+*Acts*: a Terms act whose `body` names an act id the verifier holds, which is a Text act; whose keeper field names two keepers; with no `clock`; naming a K1 cMIP that declares it needs a clock.
+
+*Answers*: §4.4's case 2 finds nothing (the words named by fingerprint, the act held a Text act, 5.2.2). By 5.8.6 the Terms are **invalid**: they do not supply what a cMIP they name declares it needs, and a keeper is not a clock (§4.4, case 8). The cMIP declares the need in its own published text, and a verifier reads it from that act (5.8.6, wave five, the lead's reading C21/C22); the checker of encoding 3 does not give case 8 until the open choice on how it reads that act is made (encoding 3, section 9, step 7.7, and section 11, item 11, for the codemeister and for Nobody, allegedly); the grammar verifier, which holds the cMIP's act, answers **invalid** (5.8.6), and **unchecked** without it. The keeper field's two keepers are written as one sorted list (encoding 3, key 8, the lead's reading C8/C35/C34). The blind reader answered **pass** for the checker, and noted **invalid** under the open choice's first reading.
+
+#### 8.22 Wave four, answer 1: two keepers, one not yet showing
+
+*Source*: "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do".
+
+*Acts*: (1) V1, a first version naming Ana and Ben as signers, keepers K1 and K2, no `in_force`. (2) A(Ana, V1), A(Ben, V1). (3) K1's records place V1 and both assents; K2's records hold none of them.
+
+*Answers*:
+- V1 in force: **not shown**, per keeper, K1 and K2 named, with the reason that K2 does not yet show the assents: they are not yet placed (5.8.3, 5.4.1, §3.4 **Placed**).
+- Once K2 also places them, its order agreeing with K1's: **in force**, per keeper (5.4.1, 5.8.4).
+- Where K2's records order them otherwise: **not shown** for the answers that rest on what they disagree on, the keepers disagree, each one's records shown (5.8.3, wave five).
+- *Re-read by P5*: 5.4.1 pins a first version that names keepers by those keepers only (P5-9); the answers above stand.
+- *Re-read by P6* (his 23:22–23:28, which reads his 16:44 as this case, "a two out of two"): V1 names no cMIP beside its keepers, so every keeper named is needed (5.8.3); the answers above stand. With a cMIP beside them that asks one of the two, V1 would be **in force**, per keeper, once K1 shows the assents, K2 named as not showing them (5.8.3, K9): scenario 8.38. (As P3 left it, Ana's and Ben's knots also pinned it, had they acted after both assents: withdrawn, scenario 8.31.)
+- *Re-read by P7* (the lead's 23:55, 3): with the keepers named, K1 is named as showing the assents and K2 as not showing them (5.8.4); the answers above stand.
+
+*The vector, for the codemeister*: acts (1), (2), (3) in order, with K1's and K2's records as the keepers' answers; rule 5.8.3; expected answer **not shown**, per keeper, reason "a keeper the Terms name does not yet show it" (§3.6).
+
+#### 8.23 Wave four, answer 2: Dana, added by an update
+
+*Source*: "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?", then "Yes".
+
+*Acts*: (1) V1 in force, naming Ana and Ben as signers, no update condition, no keeper. (2) V2, `replaces` V1, naming Ana, Ben and Dana as signers; A(Ana, V2), A(Ben, V2), A(Dana, V2). (3) V3, `replaces` V2, with A(Ana, V3) and A(Ben, V3) only.
+
+*Answers*:
+- V2: **valid**, by default: Ana and Ben, V1's known parties, signed it; Dana is not one of V1's known parties, and V1's gate does not ask her (5.5.5(a), 5.5.7(e)). **In force** once pinned (5.5.1). Dana is bound by V2 by her own assent (5.6.1(a)).
+- V3: Dana is a known party of V2 (§3.2 **Known party**), so V2's default asks Ana, Ben and Dana. Her assent is not held: **not shown** for V3 as a replacement, never **not valid** (5.5.5(c), 5.5.7(e)); V2 stays in force, **as shown**.
+
+*The vector, for the codemeister*: acts (1) to (3) in order; rule 5.5.5(a); expected answers **valid**, by default, for V2, and **not shown** for V3 as a replacement, reason "an assent of a known party (Dana) is not held".
+
+#### 8.24 Wave four, answer 3: the wall of terms
+
+*Source*: ""Renewed on the terms then current" cannot be built" (27 November, 16:46–16:48). Asked whether words that renew a month "on the terms then current" are Ana's own deal or a later version reaching her, he: "How did they build such terms in agreements?", and then "Yes, it’s the scenario we trying to make difficult on the “walls of terms”". A wall of terms is words that would carry a buyer, by her one signature, into versions she never signed (the scribe's reading of his phrase).
+
+*Acts*: (1) V1, an offer: Ben as signer; a role R of sort received with its K5 cMIP; `in_force`; a clock C; words that sell a month's access "renewed on the terms then current", read by a K1 cMIP. (2) Ana fills R: A(Ana, V1), her proof naming V1. (3) V2, `replaces` V1, raising the price, signed by Ben, the known party: **in force** once pinned. (4) The month ends on C. (5) In a variant, A(Ana, V2), with a proof naming V2.
+
+*Answers*:
+- After (3): Ana's filling is governed by V1, its proof's version; no update reaches it (5.10.6), and no later version is named as changing what she earned (5.10.7). V2 is in force for the agreement.
+- After (4): whether what her filling gave still applies is the K1 cMIP's answer, shown as that cMIP's, **per clock** (5.10.8). The words "renewed on the terms then current" move nothing: these grammar rules do not read words (§5.2), and nothing changes what a filling earned but its holder's own assent (5.10.7).
+- With (5): a new filling, under V2, with its own proof and V2's rights (5.10.2, 5.10.7, 5.10.8). Without it, nothing renews her. A client may make (5) for her, which is above the core (the MOR lead's words in the exchange).
+
+*The vector, for the codemeister*: acts (1) to (4) in order, without (5); rule 5.10.7; expected answer: Ana's filling **shown**, earned under V1, with no later version named; the K1 cMIP's answer on the month passed on as its own, per clock. With (5) added: a second filling **shown**, earned under V2.
+
+#### 8.25 Wave four, answer 4: Terms that leave out their signer
+
+*Source*: "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later". The lead's line, corrected in the ledger: "an author whether or not `authors` lists them, so `authors` names the other authors, and such Terms are valid"; the lead's reading of 18:41 (section 6.15).
+
+*Acts*: (1) Carla signs a Terms act V1 naming Ana, Ben and Carla as signers, whose `authors` name Ana and Ben only. (2) In a variant, V1's `authors` name Carla and Ana, and A(Ana, V1) follows, naming V1.
+
+*Answers* (corrected in wave five):
+- (1): case 5 finds nothing: Carla is the first author, though `authors` leaves her out, and "No Terms are invalid for leaving their signer out of `authors`" (5.3.1, P1-16); she is a party named as a signer. Ana and Ben, the other authors, sign by assents of their own (5.3.1). Encoding 3's checker answers **pass** from the one act (E13; section 9, step 7.4). Before wave five this was **invalid**, on the lead's first line (section 6.15).
+- (2): case 5 finds nothing; the Terms come into force as 5.4.1 says, once Ben's assent too is held and pinned.
+- In both, Carla's own assent, counted by 5.4.1's default, is her Terms act: "The act that publishes Terms is its signer's assent to them" (§4.3, **An author's first act**, P3-4, on his answer of 20:50, "Publishing the Terms is the publisher's assent"); she does not sign again (scenario 8.33). And Carla is a party named as a signer, so the act is not invalid under 5.3.1's sentence on a signer who is no party (P3-26; scenario 8.35).
+
+*The vector, for the codemeister*: one Terms act, its outside naming Carla, `parties` naming Ana, Ben and Carla as signers, `authors` holding the positions of Ana and Ben; rule 5.3.1 (E13); expected answer **pass**, no case of invalid: the vector N1 named (expected **invalid**) is withdrawn. Its pair, a signer who is no party, is scenario 8.35.
+
+#### 8.26 Wave four, answer 5: Ben signs for Ana
+
+*Source*: "The giver bears it, not the agent" (27 November, 16:50–16:53). He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality."
+
+*Acts*: (1) P, Terms in force signed by Ana and Ben, giving a power of sort `assent` whose rule says yes to Ben signing for Ana. (2) V1, a first version naming Ana and Carla as signers. (3) Ben signs an assent to V1, its `for` naming Ana and its `under` naming P. (4) A(Carla, V1). Both assents pinned by knots (5.4.1).
+
+*Answers*:
+- V1: **in force**, Ana's assent counted by Ben's act (5.4.1, 5.6.1(b)). Ana is bound by V1: **shown** (5.6.1(b)).
+- Ben is not bound by V1 by that act: it is not made in his own name (5.6.1(a), 5.6.3), and he is no party of V1: **not shown**, with that reason.
+- *Variant*: the giver is an agreement X, Ben signing `for` X under Terms of X: X is bound, as X's Terms say; Ben is not bound by the act as his own (5.6.3, 5.1.2). His duties toward the giver are the power's cMIP's (section 5, §5.6).
+
+*The vector, for the codemeister*: acts (1) to (4) in order; rule 5.6.3; expected answers **shown** for Ana as bound by V1, and **not shown** for Ben, reason "made for another under a power".
+
+*Re-read in wave five*: 5.6.1(b) now asks that Ana's signature be on "the version `under` names", P, and that she be "a known party of that version": she is, a signer P names, so the answers stand. 5.6.3's new sentence ("A power a version carries is given by that version's known parties, and binds only them") reads P's power as given by Ana and Ben.
+
+Added by N1: scenarios 8.22 to 8.26, one for each of the five answers, each naming one vector for the codemeister; and the variant of 8.4.
+
+COUNTED (`scen10.py`, M10's scratch script): 21 scenarios (7 from the ledger, 9 from the impact sheet's lines, 5 from the blind readers), holding the impact sheet's 22 new vectors (line 1: 3; line 6: 2; line 7: 2; line 8: 3; line 9: 1; line 10: 1; line 16: 5; line 18: 3; line 19: 2), 34 cases in all (7, 22 and 5), variants not counted.
+
+
+#### 8.27 Wave five, decision 1: the seller's power over Ana
+
+*Source*: "A filling gives no power" (27 November, 18:39–18:47; Fable 5.1's fifth attack, break 1). He: "Unknown party, different rule, what do you think? The rule used is meant for known parties"; corrected (18:46): "“that fills an unknown party spot”". The lead's sentence for draft 26 (section 5, "Wave five").
+
+*Acts*: (1) V1, an offer by the seller S: S named as a signer and author; a role R (sort received, its `what`, its K5 cMIP); `in_force`; and in `powers` an entry of sort `assent` whose rule (K3) says yes to S signing an assent `for` any holder of a filling of R. No keeper. (2) A(S, V1), and an act of S shown after it: V1 in force and pinned (5.4.1). (3) A(Ana, V1), which earns a filling of R by the K5 cMIP's proof, naming V1. (4) V3, `replaces` V1, signed by S alone, cutting what R's holders get; A(S, V3), in S's own name, naming in `relies_on` the acts that put V1 in force; then an act of S naming A(S, V3), which pins V3. (5) S signs a Statement of kind `assent`, `terms` V3, `for` Ana (`[0, Ana]`), `under` V1.
+
+*Answers*:
+- (3): Ana's filling **shown**, with its proof and V1 named (5.10.2, 5.10.7), **as shown**. She is an unknown party: she takes part through a role (§3.2, **Unknown party**).
+- (4): V3 **valid**, by default: S is V1's one known party (5.5.5(a), 5.5.7(e)); V1 names no keeper, so S's knots pin it (5.5.1(b)): **in force**, **as shown**, for the agreement. It does not reach Ana's filling (5.10.6).
+- (5): **not shown** as binding Ana, naming 5.6.1(b). Its `under` names V1, which V3 has replaced, so 5.6.1(b)'s "which were in force when the act was made" already fails, and 5.6.4 reads an act made after the replacement as not binding; the scenario's point stands without that: her assent is counted in her name on V1, the version `under` names, but she is no known party of V1, and "an assent that fills an unknown party's spot gives no power"; she gave no power "in an act of her own" (5.6.1(b), 5.10.7). It is not counted as her signature on V3, and the verifier names no later version with her filling (5.10.7). It stands as S's act in S's own line (5.7.1). By 5.6.3 it does not bind S as an act of S's own. 5.6.3 calls the one it binds "the grantor (5.6.6), who gave the power", and 5.6.6 calls the grantor "the one in whose name it was made", Ana; here the two senses come apart, the power being given by V1's known party, S (listed in the report, P3).
+- Before wave five, as Fable read it: (5) **shown** as Ana's assent to V3, by "a power they gave" (5.10.7 as N1 left it), and V3 named as changing what her filling earned.
+
+*The vector, for the codemeister*: acts (1) to (5) in order; rules 5.6.1(b), 5.10.7; expected: (5) **not shown** as Ana's signature, reason "an assent that fills an unknown party's spot gives no power"; Ana's filling **shown**, earned under V1, no later version named. (P1's "For P2", vector (a).)
+
+#### 8.28 Wave five, decision 3, read again after his 22:36: a dead keeper, then a new agreement
+
+*Source*: "A dead keeper: an update every needed signer signs needs no keeper" (27 November, 18:44–18:51). He: "A dead keeper forces a new version of the agreement, no?"; "The agreement needs the keeper to run. Does it need the keeper for an update with new signatures?"; "Sounds good".
+
+*Read again* (P5) on "A dead keeper: two of three cannot leave it" (21:29–21:42); "An update the keeper never showed is no update" (22:27–22:30), he: "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper."; "A dead keeper: the agreement is dead; what follows is a new act" (22:36), he: "So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage, but the truth is, every single time, it’s a new act."; and "No rule for an exception logic covers" (22:37–22:39). The lead's readings of 22:45 (section 6.16).
+
+*Acts*: (1) V1 in force, a first version naming Ana, Ben and Carla as signers, keeper K, a role R with its K5 cMIP and `in_force` (5.4.2), and an update condition C whose cMIP accepts an update any two of the three sign (its cMIP held); V1 and its assents placed by K. (2) Dana, an unknown party, fills R: A(Dana, V1), her proof naming V1, placed by K. (3) V2, `replaces` V1, signed by Ana (her Terms act, her assent, §4.3); A(Ben, V2), naming V2. (4) W1, a Terms act with no `replaces`, signed by Ana, naming Ana, Ben and Carla as signers and keeper K′, and naming V1's root in one of its fields (which field is open: encoding 3, section 11); A(Ben, W1), A(Carla, W1); K′ places W1 and both assents.
+
+*Answers*:
+- *K alive*: K places (3). C answers **valid**, per keeper, on the assents K shows (5.5.1(a), 5.5.7(c), (d)); K pins V2 (5.5.1(b)): V2 **in force**, **per keeper**, K named (5.5.3). Carla's assent is not asked ("Carla’s signature cannot stop it", his 21:42).
+- *K falls silent before it shows (3)*: the gate counts only the assents K shows, and K shows none of V2's (5.5.1(a)): V2 is no update of V1. C's cMIP is asked on the assents K shows, none, and its answer is passed on, per keeper (5.5.7(c); P6, the lead's 23:22, 1): for C, which accepts two of the three, **not valid**, per keeper, with the ground it gives; V2 **not shown** as in force, with the reason that a keeper the Terms name does not yet show it (§3.6, 5.8.3). *As P5 left it*: **not shown** as a replacement, the cMIP's answer not said; V2 competes with nothing and makes no **fork** (5.5.1(a), 5.5.4, 5.12.2). V1 stays where K left it, the last version K showed, **per keeper** (5.5.3, 5.8.3): no act gets past K as an update, and no answer says that the agreement ended (5.5.6).
+- *All three sign W1*: W1 has no `replaces`: it is the first version of a new agreement, whose root is W1 (§3.1 **Agreement**). It comes into force when its three assents are present, W1 itself being Ana's (5.4.1, §4.3), and is in force once K′ shows them: **in force**, **per keeper**, K′ named (5.4.1, 5.8.4). It is no update of V1 and no fork with V1 or V2 (5.8.3, §5.12); its naming V1's root is a knot (§3.4, 5.13.1), which shows lineage and orders nothing in K's place (5.8.4). W1 is his 21:42's "clone to the agreement to a new keeper", read as the new agreement of 22:36 by his 23:30–23:32 ("The clone is the new agreement"; the ledger's line, to check).
+- *The old agreement's acts*, Dana's filling among them, once K no longer shows them (P6, his 23:22–23:29): where the verifier holds a copy of K's signed record showing her filling, it stands: **shown**, with its proof and V1 named (5.10.2), bound by V1 for as long as its words say; where it holds no copy, whether it stands is **unchecked** (5.10.6, §3.6). Nothing reaches it, W1 included (5.10.6). No client is bound to keep a copy (his 23:29: "It’s not something I would specify."). *As P5 left it*: "as K showed them", her filling **shown** (the lead's 22:45, 4, corrected by his 23:22–23:29). *Re-read by P7* (the lead's 23:55, 1 and 2): a held copy of K's signed record counts for every answer about order, V1 as the last version K showed included (5.8.4); with none held, K's record not held is **unchecked** (§3.6 **Unchecked**); the answers above stand.
+- *As P3 left it*: the main case had two known parties and V2 signed by both, pinned by their knots whatever keeper V1 named, **in force**, **as shown**; the variant with "any one of two" was **not shown**, per keeper, the way out "a new version, naming a new keeper, that Ana and Ben both sign". Withdrawn with the split of the pin (his 22:36 and 22:39): an update every known party signs, while K shows nothing, is **not shown**, per keeper, as V2 above, and the way out is W1, a new agreement.
+
+*The vector, for the codemeister* (none written): (a) acts (1) to (3), K placing them: V2 **valid** by C, **in force**, per keeper; (b) acts (1) to (3), K showing nothing after (2): C **not valid**, per keeper, on no assent shown; V2 **not shown** as in force, per keeper, reason "a keeper the Terms name does not yet show it", no fork; V1 the last version, per keeper; (c) with (4): W1 **in force**, per keeper, K′ named, no fork with V1 or V2; (d) K silent: with a copy of K's signed record held, Dana's filling **shown**, V1 named; with none, **unchecked** (P6). Rules 5.5.1, 5.8.3, 5.4.1, 5.10.6. Which field of W1 names V1 waits on encoding 3's open item; to be written once it is chosen. (P1's "For P2", vector (b), on the new ground.)
+
+#### 8.29 Wave five, decisions 1 and 2: a known party fills its own spot
+
+*Source*: "A filling gives no power", his correction (18:46): "“that fills an unknown party spot”", the lead's line: "A spot a known party fills is a known party's act, and the known parties' rule applies to it"; and (18:47): "It’s seems important to really make a point that these two are not the same class or IDs and are not bound by the same rules."
+
+*Acts*: (1) V1, an offer by S, named as a signer and author; a role R (sort received, its K5 cMIP); `in_force`. (2) A(S, V1), pinned: V1 in force. (3) S assents again to V1, naming A(S, V1) in `previous` (no fork of S's line), in a way R's K5 cMIP reads as a proof: S's filling of R, its proof naming V1.
+
+*Answers*:
+- (3): the filling **shown**, with its proof and V1 named (5.10.2). Its holder S is a known party of V1 (§3.2, **Known party**): "A spot that a known party of the version naming it fills is filled by a known party's act: that filling is no unknown party's, the known parties' rules apply to it, and an update reaches it as it reaches that party" (§3.2, **Unknown party**; its last clause P5's, on the lead's answer 1 of 22:30). S's filling is read under the known parties' rules, not as an unknown party's (§3.2). No rule asks a verifier to label a filling's holder known or unknown; this answer is the scribe's reading of §3.2. 5.5.5(a) and 5.5.7(e) say the default signers are "never a signer who fills a role": read as "filling a role does not make a signer known", S stays a known party, named as a signer; read as excluding any signer who fills one, S would stop being a default signer. Draft 26's words do not choose (For P3).
+- What the known parties' rules do to that filling under a later version is scenario 8.36: 5.10.6, 5.4.3, 5.6.1(c) and 5.6.2 now speak of "an unknown party's filling", and 5.10.7 of "a filling" (the P1 trace, For Nobody, 2).
+
+*The vector, for the codemeister*: acts (1) to (3); rule §3.2 **Unknown party**; expected: the filling **shown**, read under the known parties' rules, its holder a known party of V1 as V1 names it. Grammar case 74 is kept, renamed (the lead's reading F17/C10); case 64 is retired (C9). (P1's "For P2", vector (c).)
+
+#### 8.30 The lead's reading 1: which signers an update needs, under a named condition
+
+*Source*: the lead's reading 1 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`; section 6.16): "The signers an update "needs" are those the condition's cMIP requires (K2's output); lacking one, by default, the known parties. "Each shown after" means every needed signer's act is shown after every needed assent." The scribe's question 2 (the P1 trace, For Nobody, 3).
+
+*Acts*: (1) V1 in force, naming Ana, Ben and Carla as signers, keeper K, and an update condition C whose cMIP requires the assents of Ana and Ben (Carla's not asked). (2) V2, `replaces` V1; A(Ana, V2); A(Ben, V2). (3) A later act of Ana's and one of Ben's within the agreement, each naming both assents. (4) K shows nothing of (2) or (3).
+
+*Answers*:
+- C's cMIP requires Ana's and Ben's assents, and both are held (5.5.5); whether they count is the keeper's (below).
+- Draft 26 now (P5-11, P5-12; his 22:30 and 22:39, the lead's 22:45, 1): V1 names K, and the gate counts only the assents K shows (5.5.1(a)). K shows none, so V2 is no update of V1 while K does not show it; C's cMIP is asked on the assents K shows, none, and its answer passed on, per keeper: **not valid**, per keeper, with the ground it gives, and V2 **not shown** as in force, K named as not yet showing it (5.5.7(c), §3.6, 5.8.3; P6, the lead's 23:22, 1); no fork. *As P5 left it*: **not shown** as a replacement, the cMIP's answer not said. Once K shows both assents, C answers **valid** and K pins V2: **in force**, per keeper, Carla's assent not asked (5.5.1). If K never shows them, V1 stays where K left it, and the parties go on by a new agreement (5.8.3; scenario 8.28).
+- *As P3 left it* (P3-7, P3-9, his 21:42): V2 **valid**, by C, and **not shown** as in force, per keeper, Carla not having signed it, so that the knots did not pin it. *Before P3*: on the lead's reading 1 as first written at 20:41, V2 was pinned by Ana's and Ben's knots, **in force**, **as shown**. The reading's "K2's output" was the lead's error, K4 meant (21:45, answer 1).
+
+*The vector, for the codemeister*: acts (1) to (4); rules 5.5.1(a), 5.5.1(b), 5.5.5, 5.5.7; expected C **not valid**, per keeper, and V2 **not shown** as in force, per keeper, K named, no fork (P6); with K's records showing both assents, **valid** by C and **in force**, per keeper. To be written now.
+
+#### 8.31 The lead's reading 2: a first version every party signs, keepers named
+
+*Source*: the lead's reading 2 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A first version that every party signs is pinned by their knots, whatever keeper is named." The scribe's question 1 (For Nobody, 4).
+
+*Acts*: (1) V1, a first version naming Ana and Ben as signers, keepers K1 and K2, no `in_force`. (2) A(Ana, V1), A(Ben, V1). (3) A Statement of Ana's and one of Ben's within the agreement, each naming both assents. (4) K1 places (1) to (3); K2 shows nothing.
+
+*Answers*:
+- Draft 26 now (5.4.1, P5-9, P6-7: "Where it names keepers, they show it, as many of them as 5.8.3 asks, at the positions they give those assents, and an act they do not yet show is not yet placed (§3.4)"; V1 names no cMIP beside its keepers, so both are needed): K2 shows nothing, so V1 is **not shown** as in force, per keeper, K2 named as not yet showing the assents (5.8.3); (3) pins nothing in the keepers' place (5.8.4). The reading is withdrawn (the lead's note, 22:45; section 6.16).
+- *As P3 left it* (5.4.1, P3-17, on the reading): V1 **in force**, **as shown**, K2's silence notwithstanding. *Before P3*: as now, per keeper, K2 named.
+
+*The vector, for the codemeister*: acts (1) to (4); rule 5.4.1; expected **not shown** as in force, per keeper, K2 named. To be written now.
+
+#### 8.32 The lead's reading 3: lateness by knots, with a keeper named
+
+*Source*: the lead's reading 3 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "With keepers named, knots alone still show lateness; a keeper vouches for the chaining only." The scribe's question 3 (For Nobody, 5).
+
+*Acts*: (1) O = V1 in force, naming Ana and Ben as signers and keeper K. (2) F = V2, `replaces` V1, A(Ana, V2), A(Ben, V2), and a later act of each naming both assents. (3) L = V3, `replaces` V1; A(Ana, V3) and A(Ben, V3), each naming in `previous` its signer's act of (2). (4) K is silent from (1) on.
+
+*Answers*:
+- K is silent from (1) on: it shows none of F's or L's acts. With O naming K, the gate counts only the assents K shows (5.5.1(a)): neither F nor L is an update of O while K does not show them, neither is late, and they make no fork; O stays where K left it, **per keeper** (5.8.3). With K named, knots do not show L late (5.5.4(a), P5-16), and do not pin F (5.5.1(b), P5-12).
+- *Variant*: K places F's acts, then L's: F **valid**, by default, and **in force**, per keeper; L **late**, per keeper, naming 5.5.4 and the positions K gives (5.5.4(b), (c)).
+- *Variant*: K places L's assents before F's, while A(Ana, V3) names Ana's act of (2): K's record contradicts a knot the verifier holds: **not shown** for the answers that rest on that record, with the reason that the keeper contradicts the acts, the record kept as evidence (5.5.4(c), 5.8.4).
+- *As P3 left it* (5.5.4(a), P3-19, P3-20: "Whether or not O names keepers, L is shown after O was replaced, by knots"; "Where O names keepers, knots still show L late: a keeper vouches for the chaining only"): F pinned by its signers' knots, **as shown**; L **late**, **as shown**. *Before P3* (5.5.4(a): "Where O names keepers, knots show L late only as a named keeper's contradiction"): nothing showed L late, and L and F were a **fork** whose shared act is O. The reading is withdrawn (the lead's 22:45, 2; section 6.16).
+
+*The vector, for the codemeister*: acts (1) to (4); rules 5.5.1(a), 5.5.4, 5.8.3; expected, as told: neither F nor L an update of O, no fork, O the last version, per keeper; the variants: F **in force** and L **late**, per keeper; and **not shown**, the keeper contradicting the acts. To be written now.
+
+#### 8.33 The lead's reading 4, his since 20:50: the author's Terms act is her assent
+
+*Source*: the lead's reading 4 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "Fable 1.1: the Terms act is its signer's assent; the other parties assent later, each in an act of their own." The note marks it for Nobody, allegedly, to see; he has: "Publishing the Terms is the publisher's assent" (27 November, 20:49–20:50). He: "What is number 4?"; then "Yes, I don’t see the need to have her sign twice". The scribe's question 4 (For Nobody, 6).
+
+*Acts*: (1) Ana signs V1, a first version naming Ana and Ben as signers, Ana its author, no `in_force`, no keeper. (2) A(Ben, V1), naming V1 in `relies_on` (or nothing more: an assent's `terms` names V1). (3) A Statement of Ana's within the agreement naming A(Ben, V1); a later Statement of Ben's naming that act of Ana's. No other assent of Ana's.
+
+*Answers*:
+- Draft 26 now (§4.3, **An author's first act**, P3-4: "The act that publishes Terms is its signer's assent to them"; 5.4.1, P3-5: "the Terms act itself being its signer's (§4.3)"): V1 is Ana's assent; with Ben's, the assents V1's default asks are present, and each party has an act shown after both: V1 **in force**, **as shown** (5.4.1).
+- *Before P3*, an assent being a Statement apart: **not shown** as in force, no assent in Ana's name being held (Fable's answer, and P1's stranger's).
+
+*The vector, for the codemeister*: acts (1) to (3); rule 5.4.1; expected **in force**, **as shown**. To be written now.
+
+#### 8.34 The lead's reading 5: a holder's Statement giving a power
+
+*Source*: the lead's reading 5 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): ""In an act of her own" means a Statement in her own name, naming the grantee and the power's sort; K3 reads it." It rests on "A filling gives no power" and "The giver bears it, not the agent" (he: "No, Ana took the risk, she bears the responsability."). The scribe's question 6 (For Nobody, 8).
+
+*Acts*: (1) V1, an offer by S, with a role R and, in `powers`, an entry of sort `assent` whose rule (K3) says yes to S signing an assent `for` a holder of R where that holder has made a Statement in her own name naming S as grantee and the sort `assent`. (2) Ana fills R: A(Ana, V1), her proof naming V1. (3) Ana signs, in her own name (no `for`, no `under`), a Statement within V1 of a K7 kind G whose `content` names S and the sort `assent`. (4) V3, `replaces` V1, signed by S; V1 names S and T as signers, so V3 asks T's assent too. (5) S's Statement of kind `assent`, `terms` V3, `for` Ana, `under` V1. (6) A(T, V3), naming (5) in `relies_on`, and the acts that pin V3: (5) is shown before acts enough for V3 to pass V1's gate and pin (5.6.4). *Changed by P3*: P2's V3, signed by S alone and pinned before (5), left V1 replaced when (5) was made; V1 now names T as well, so that (5) is made while V1 is in force (INFERRED).
+
+*Answers*:
+- Draft 26 now (5.6.1(b), P3-22: "or, for a filling's holder, they gave that power in an act of their own: a Statement in their own name, of a kind a K7 cMIP gives (these grammar rules name no kind for it), that names the one the power is given to and the power's sort, and that the power's rule reads through that cMIP (K3)"): (3) is Ana's act of her own, and the power's rule reads it through G's cMIP; V1 was in force when (5) was made (5.6.4): (5) counts as Ana's signature on V3 (5.6.1(b), 5.10.7); the verifier names V3 with her filling as a later version that changes what it earned, with (5) and the power named (5.10.7). Without (3): **not shown**, as scenario 8.27.
+- *Before P3*: 5.6.1(b) asked "and they are a known party of that version", which Ana is not, beside the holder's clause; read as one list, (5) was **not shown** even with (3).
+
+*The vector, for the codemeister*: acts (1) to (6); rules 5.6.1(b), 5.6.4, 5.10.7; expected (5) **shown** as Ana's signature, the power named; without (3), **not shown**. To be written now; K7 kind G's cMIP is one the vector must give.
+
+#### 8.35 The lead's reading 6: a Terms act signed by one who is no party
+
+*Source*: the lead's reading 6 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A Terms act signed by someone who is not a party is invalid." It rests on "There is no such thing as an unsigned act" and "Known parties". The scribe's question 5 (For Nobody, 7; Fable 1.10).
+
+*Acts*: (1) Dana signs a Terms act V1 naming Ana and Ben as signers, `authors` naming Ana.
+
+*Answers*:
+- On the reading: **invalid**, at §4.4's case 5, after the authors: the act's signer is named by no party `[0, signer]` (encoding 3, E13, "A signer who is no party"; section 9, step 7.4).
+- Draft 26 now gives the same (5.3.1, P3-26: "so are Terms that carry `parties` and whose signer is not one of the parties they name as signers"; §4.4 case 5, P3-27): **invalid**, case 5, after the authors. Before P3, no case of 5.3.1 or §4.4 named it.
+- The pair of scenario 8.25: there the signer, Carla, is a party, and the act passes.
+
+*The vector, for the codemeister*: one Terms act, its outside naming Dana, `parties` naming Ana and Ben as signers, `authors` holding Ana's position; rule 5.3.1 (E13); expected **invalid**, case 5. Draft 26 and encoding 3 now give it; to be written now.
+
+#### 8.36 The lead's reading 7: a known party's filling and a later version
+
+*Source*: the lead's reading 7 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A spot a known party fills is a known party's act: 5.10.7 (an unknown party's filling) does not stand for it." It rests on "A filling gives no power", with "that fills an unknown party spot" and "these two are not the same class or IDs". The scribe's question 7 (For Nobody, 2).
+
+*Acts*: (1) V1, an offer naming S and Ben as signers, a role R with its K5 cMIP, `in_force`, and an update condition C whose cMIP accepts an update S alone signs. (2) V1 in force and pinned. (3) Ben fills R: an assent of Ben's that R's K5 cMIP reads as a proof, naming V1. (4) V2, `replaces` V1, signed by S alone, changing what R's holders earned; valid by C, pinned.
+
+*Answers*:
+- (3): Ben's filling **shown**, a known party's act, no unknown party's (§3.2, **Unknown party**; scenario 8.29).
+- (4): V2 **valid**, by C, and **in force**, once pinned, **as shown** (5.5.1). Ben is bound by V2 as a known party of V1, though he did not sign it (5.6.1(c)).
+- Draft 26 now (5.10.7, P3-23, P3-24: "An unknown party's filling (§3.2) has exactly the rights offered by the version it was earned under"; "A spot a known party fills is a known party's act (§3.2), and this rule does not stand for it"): 5.10.7 does not stand for Ben's filling; the known parties' rules apply to it, and Ben is bound by V2 as a known party (5.6.1(c)).
+- Draft 26 now (P5-6, P5-7, P5-19, P5-23, P5-24; the lead's answer 1 of 22:30): 5.10.6's last sentence, 5.10.8, 5.5.7(f) and §3.3 **Apply** speak of an unknown party's filling, and §3.2 **Unknown party** says of a spot a known party fills that "an update reaches it as it reaches that party": V2 reaches what Ben's filling earned as it reaches Ben, a known party bound by V2 (5.6.1(c)). *As P3 left it*: those rules spoke of any filling, and two readings stood side by side.
+
+*The vector, for the codemeister*: acts (1) to (4); rules §3.2 **Unknown party**, 5.6.1(c), 5.10.6, 5.10.7; expected: V2 reaches Ben's filling as it reaches Ben (§3.2), Ben bound by V2 (5.6.1(c)); 5.10.7 does not stand for it. To be written now.
+
+#### 8.37 P6: two of two keepers, one cheats
+
+*Source*: "How many keepers are needed: the agreement and its cMIP decide" (27 November, 23:22–23:28). He: "That scenario was a two out of two, to check that none of the two cheated." Read with "Two keepers named, both needed" (16:40–16:44), he: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do".
+
+*Acts*: (1) V1 in force, naming Ana and Ben as signers, keepers K1 and K2, no cMIP beside them, no update condition. (2) U1, `replaces` V1, signed by Ana (her Terms act, her assent, §4.3); A(Ben, U1). (3) K1's records place U1 and Ben's assent after V1's acts; K2's records place, at the positions K1 gives them, other acts, and no U1: K2 cheats, or is broken.
+
+*Answers*:
+- V1 names no cMIP beside its keepers: every keeper named is needed, both (5.8.3).
+- U1's gate counts only the assents its keepers show, as many as 5.8.3 asks (5.5.1(a)): K2 does not show them, and the keepers disagree on what stands at those positions. About U1 as a replacement: **not shown**, per keeper, K1 and K2 named, with the reason that the keepers disagree; the records of each are shown as evidence of the disagreement (5.8.3, 5.5.5(d)). By default the answer is never **not valid** (5.5.7(e)). V1 stays in force, per keeper; answers that rest only on what K1 and K2 agree on stand (5.8.3).
+- No one decides which keeper lied: a verifier shows both records and chooses neither (5.8.3; "Two disagreeing has its value though", 26 November).
+- *Re-read by P7* (his 23:52 to 00:00; the lead's 23:55, 3): this is the default, cross verification, the socket empty; K1 is named as showing U1 and K2 as not showing it (5.5.3, 5.8.4); the answers above stand. *Variant* (the lead's 23:55, 4): K2 gives two signed answers on U1's position that contradict each other: K2 counts as one not showing U1, and the contradiction is shown as evidence (5.8.3, 5.8.4); by default both are needed, so U1 is **not shown** as a replacement, per keeper, K2 named as not showing it.
+
+*The vector, for the codemeister* (none written): acts (1) to (3), K1's and K2's records as the keepers' answers; rule 5.8.3; expected U1 **not shown** as a replacement, per keeper, reason "the keepers the Terms name disagree" (§3.6), both records shown, K1 named as showing it and K2 as not; V1 in force, per keeper; the variant, U1 **not shown**, K2's two answers shown as evidence. Writable now.
+
+#### 8.38 P6: two of three keepers by a named cMIP; one keeper dies
+
+*Source*: the same entry (23:22–23:28). He: "I mean… serious businesses would at least have 3 keepers with a two out of three rule no?"; "In a two out of three, you keep that, plus you add a way out if one of the three dies." The socket beside the keepers is his, "Keepers: cross verification by default, a socket to lift it" (27 November, 23:52, to 28 November, 00:00): "It’s own socket makes sense."; "Agreed, and there is a socket to lift it." Q lifts the default, cross verification.
+
+*Acts*: (1) V1 in force, naming Ana and Ben as signers, keepers K1, K2 and K3, and beside them a cMIP Q (task K9) that asks two of the three (its cMIP held); no update condition. (2) K3 stops answering. (3) U1, `replaces` V1, signed by Ana; A(Ben, U1). (4) K1 and K2 place U1 and Ben's assent, at positions on which they agree; K3 shows nothing.
+
+*Answers*:
+- How many keepers must show U1 is Q's (5.8.3, K9): asked on the records the verifier holds, it answers yes, K1 and K2 showing it.
+- U1's gate: the default asks Ana and Ben, and both assents are shown by enough keepers: **valid**, by default, per keeper (5.5.1(a), 5.5.7(e)). Its pin: shown after V1's acts, per K1 and K2 (5.5.1(b)): U1 **in force**, **per keeper**, K1 and K2 named, K3 named as not showing it (5.8.3). The agreement goes on by the two.
+- *Variant*: K1 and K2 disagree on U1's position, K3 silent: what the answer rests on is Q's (5.8.3, K9); the verifier names the three keepers and shows the records of each as evidence.
+- *Variant*: the verifier lacks Q: whether enough keepers show U1 is **unchecked** (5.8.3, §3.6), and so is U1 **in force**.
+- *Variant* (P7, the lead's 23:55, 4): K3 gives two signed answers on U1 that contradict each other: K3 counts as one not showing U1, and the contradiction is shown as evidence; K1 and K2 still meet Q: U1 **in force**, per keeper, K1 and K2 named, K3 named as not showing it, its two answers shown (5.8.3, 5.8.4).
+- *Variant*: with no cMIP beside the three keepers, every keeper named is needed: U1 **not shown**, per keeper, K3 named as not showing it (5.8.3); V1 stays where the keepers left it, and what the parties do next is a new agreement (5.8.3, scenario 8.28).
+
+*The vector, for the codemeister* (none written): acts (1) to (4); rules 5.8.3, 5.5.1, K9; expected Q's yes, U1 **valid** by default and **in force**, per keeper, K1 and K2 named as counted, K3 as not showing it; variants as above. Waits on encoding 3's section 11, item 15 for where Q is written.
+
+#### 8.39 P6: one keeper dies, none named beside it; the buyer's filling
+
+*Source*: the same entry (23:22–23:29). He: "My question is how can the bytes prove that the keeper was alive when she signed?"; "Provided that there is a back up copy somewhere…"; and (23:29), on a client keeping the keeper's record: "It’s not something I would specify."
+
+*Acts*: (1) V1 in force, naming Ana as signer, keeper K, no cMIP beside it, and a role R with its K5 cMIP and `in_force` (5.4.2). (2) Dana, an unknown party, fills R: A(Dana, V1), her proof naming V1; K places it, and signs its record. (3) K dies: it shows nothing more.
+
+*Answers*:
+- One keeper named, so it is needed (5.8.3). After (3), the agreement stays where K left it (5.8.3).
+- *The verifier holds no copy of K's signed record*: whether Dana's filling stands is **unchecked**, with the reason that K's record is not held (5.10.6, §3.6 **Unchecked**, which names it since P7, the lead's 23:55, 1). Never a yes, and never a no.
+- *The verifier holds one copy of K's signed record, showing (2)*: her filling stands: **shown**, with its proof and V1 named (5.10.2), bound by V1 for as long as its words say, on V1's clock (5.10.8); nothing reaches it, a new agreement that names V1 included (5.10.6). The copy counts for every answer about order, not only for her filling: what K signed stands when it no longer shows the agreement's acts (5.8.4; P7, the lead's 23:55, 2).
+- No client is bound to keep a copy: the one duty written for clients is 5.12.9's (§3.6 **Client**).
+
+*The vector, for the codemeister* (none written): acts (1) to (3); rule 5.10.6; expected **unchecked** with no copy of K's record held; with one, the filling **shown**, V1 named. Writable now, with K's record given as a held copy.
+
+Added by P2: scenarios 8.27 to 8.29, one for each of his three decisions of 27 November, evening, each naming the vector of P1's "For P2"; scenarios 8.30 to 8.36, one for each of the lead's seven readings of 20:41, each written on the reading, with draft 26's answer beside it where they differ; and the re-reading of 8.2 to 8.7, 8.11, 8.13 to 8.18, 8.20 to 8.22, 8.25 and 8.26 (the trace, P2). P3 brought 8.4, 8.6, 8.17, 8.22, 8.25, 8.27, 8.28 and 8.30 to 8.36 to draft 26 as P3 leaves it, each change listed in the trace (P3). P5 rewrote the re-readings of 8.4, 8.5, 8.6, 8.17 and 8.22, 8.27's (4), and 8.28, 8.30, 8.31, 8.32 and 8.36 on his 22:30, 22:36 and 22:39 and the lead's readings of 22:45, each expected answer with them (the trace, P5). P6 re-read 8.4, 8.22 and 8.31, rewrote parts of 8.28 and 8.30, and added 8.37 to 8.39, on his 23:22 to 23:32 and the lead's readings of 23:22 and 23:33, each expected answer with them (the trace, P6). P7 re-read 8.22, 8.28, 8.37, 8.38 and 8.39 on his 23:52 to 00:00 and the lead's four lines of 23:55, with a variant each in 8.37 and 8.38 (the trace, P7).
+
+### 11.8 The trace as P7 left it
+
+**In plain words.** One row for each rule of draft 26, so that a reader can follow any rule back to where it came from: the draft 25 rule it was written from, how the brief sorted that rule, the exchange of the ledger that shaped it, the settled note's row where one carries it, and the reading of the MOR lead's where one shaped it. Nothing here is a decision.
+
+**How to read it.** Built by script (`trace10.py`, M10's scratch script) from the trace file's rows (M2 to M7), the brief's sort (its section 2), the ledger's own headings on main, and the "Shaped" lists of section 6 above, then read by eye. *Draft 25*: the rule or rules each trace row names (a lettered clause of draft 26 is in its rule's row); **N1** to **N9** are the brief's new rules. *The brief's sort*: as the brief has it; where the brief read a rule two ways, the way the lead's reading settled it is added (section 6.3). *The ledger*: each exchange by its heading as the ledger on main has it, with its date; "no entry (the brief)" where the brief found none. *Settled note*: its rows, as the trace cites them (every row of it is the lead's reading). *The lead's reading*: the entry of section 6 that shaped the rule, by its number there; "14:59" is the lead's reading of 27 November, 14:59, which shaped edits (i) and (j) of M10 (the trace, M10's part) and is not yet in section 6. A rule's *Rests on* and *His words* in full are in the trace file.
+
+#### 9.1 The numbered rules of §5
+
+| draft 26 | draft 25 | the brief's sort | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|---|
+| 5.1.1 | G1.1 | G1.1: stays | no entry (the brief) | — | — |
+| 5.1.2 | G1.2 | G1.2: changes | "Nothing about me without my signature" (18 November); "Delegation is a leftover" (18 November) | — | P3-32: reading 10(b) of 20:55; P5-8: the lead's answer 2 of 22:30 |
+| 5.1.3 | G1.3 | G1.3: stays | no entry (the brief) | — | — |
+| 5.1.4 | G1.4 | G1.4: two ways, read "changes" by the lead (6.3) | "Whose place counts; protect the unknown party, as a principle" (26 November); "A condition in time with no anchor is refused" (26 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.14 C6 |
+| 5.1.5 | G1.5 | G1.5: stays | no entry (the brief) | — | — |
+| 5.2.1 | G2.1 | G2.1: stays | "The words of Terms are a Text act" (26 November) | — | — |
+| 5.2.2 | N4 | N4: new | "The words of Terms are a Text act" (26 November); "Signing an agreement relies on its words" (26 November); "A missing act stays unchecked: no door around it" (26 November) | Q25, Q24 | 6.5 row 3; 6.14 F11, C16/F11 |
+| 5.2.3 | G2.2 | G2.2: stays | no entry (the brief) | Q7 | 6.6 row 3 |
+| 5.3.1 | G3.1 | G3.1: two ways, read "changes" by the lead (6.3) | "There is no unsigned act: the author is a known party" (27 November); "The signer of a Terms act is an author" (27 November) | — | 6.5 row 1; 6.13; 6.14 C1/S; 6.15; P3-26: reading 6 of 20:41 |
+| 5.3.2 | G3.2 | G3.2: stays | no entry (the brief) | — | — |
+| 5.4.1 | G4.1, G4.6 | G4.1: two ways, read "changes" by the lead (6.3); G4.6: changes | "Valid means in force: one gate for an update" (26 November); "In force once pinned" (18 November); "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November); "A missing act stays unchecked: no door around it" (26 November); "Knots are knots: one reading, "shown after"" (27 November); "Publishing the Terms is the publisher's assent" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | Q7, M19 | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1; 14:59, M8 (edit (i); the trace, M10); 6.14 C2, C20, C5; P3-5, his 20:50; P3-17, P3-18: reading 2 of 20:41; P3-39: reading 18 of 20:55; P5-9, P5-10: his 22:36 and 22:39, the lead's note of 22:45 |
+| 5.4.2 | G4.2 | G4.2: stays | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3; P3-43: reading 19(a) of 20:55 |
+| 5.4.3 | G4.3 | G4.3: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November); "A filling gives no power" (27 November) | M15 | 6.8 row 1; 6.14 F17/C10 |
+| 5.4.4 | G4.4 | G4.4: stays | no entry (the brief) | — | P3-42: reading 18 of 20:55 |
+| 5.4.5 | G4.10 | G4.10: changes | "In force once pinned" (18 November); "A fork is a fork" (27 November); "What a race stops" (18 November); "The place vouches for the chaining only" (26 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1; 6.14 C15; P3-31, P3-44: readings 10(a), 19(b) of 20:55 |
+| 5.5.1 | G4.8, N1 | G4.8: changes; N1: new | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "The two gates" (17 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "An update the keeper never showed is no update" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | Q7 | 6.1 Item 28: "shown after"; 6.7 row 1; 6.1 row 3; 6.2 Item 31: the wording of the gate and the pin; 6.10 row 3 (the colon); 6.14 C3, F4, C4, C46a; P3-9, his 21:42; answers 2 and 3 of 21:45; P5-11, P5-12, P5-27: his 22:30, 22:36 and 22:39; the lead's 22:45, 1 |
+| 5.5.2 | G4.5 | G4.5: changes | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Who signs an update by default: the known parties" (26 November) | — | — |
+| 5.5.3 | G4.6 | G4.6: changes | "The place vouches for the chaining only" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "No rule for an exception logic covers" (27 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; P3-40: reading 18 of 20:55; P5-13: his 22:39; P7-2: the lead's 23:55, 3 |
+| 5.5.4 | G4.7, G4.7(a), G4.7(b), G4.7(c), G4.7(d), G4.7(e) | G4.7: changes; G4.7(a): changes; G4.7(b): changes; G4.7(c): changes; G4.7(d): stays; G4.7(e): stays | "The gate and the pin; a fork, not a race" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "The place vouches for the chaining only" (26 November); "Ana's month ends by the clock the agreement names" (27 November); "Whose place counts; protect the unknown party, as a principle" (26 November); "A missing act stays unchecked: no door around it" (26 November); "A late version 3 is rejected" (26 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "An update the keeper never showed is no update" (27 November); "No rule for an exception logic covers" (27 November) | M20, M5 | 6.1 Item 28: "shown after"; 6.2 Item 31: the wording of the gate and the pin; 6.6 row 4; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.3 G13.1; 6.7 row 1; 6.1 row 3; 6.10 row 3 (5.5.4(c)); 6.14 F4, C46b, C17/F2, C28; P3-19 to P3-21: reading 3 of 20:41; P5-14 to P5-16: his 22:30; the lead's 22:45, 2 |
+| 5.5.5 | G4.8, G4.8(a), G4.8(b), G4.8(c), G4.8(d), G4.8(e) | G4.8: changes; G4.8(a): changes; G4.8(b): stays; G4.8(c): stays; G4.8(d): changes; G4.8(e): stays | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "The place vouches for the chaining only" (26 November); "A missing act stays unchecked: no door around it" (26 November); "The known parties of a version are the signers it names" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | M11 | 6.2 Item 33: the default signers; 6.6 row 5; 6.1 row 1; 6.10 row 1; 6.13; 6.14 F3, C46c; P3-7: reading 1 of 20:41, answer 1 of 21:45; P3-11, his 21:42; P5-17: his 22:39 |
+| 5.5.6 | G4.9 | G4.9: changes | "What a dissolution is" (18 November); "Leaving takes two acts" (18 November); "The gate and the pin; a fork, not a race" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November) | — | 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
+| 5.5.7 | G4.11, G4.11(a), G4.11(b), G4.11(c), G4.11(d), G4.11(e), G4.11(f), G4.11(g), G4.11(h), G4.11(i) | G4.11: stays; G4.11(a): changes; G4.11(b): stays; G4.11(c): changes; G4.11(d): changes; G4.11(e): changes; G4.11(f): changes; G4.11(g): changes; G4.11(h): stays; G4.11(i): changes | "Valid and in force, two words, two jobs" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "A condition in time with no anchor is refused" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November); "A hand count is the client's choice" (26 November); "What a dissolution is" (18 November); "Publishing the Terms is the publisher's assent" (27 November); "An update the keeper never showed is no update" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.2 Item 33: the default signers; 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4; 6.7 row 2; 6.8 row 1; P3-6, his 20:50; P3-8: reading 1 of 20:41, answer 1 of 21:45; P5-18: the lead's 22:45, 1; P5-19: the lead's answer 1 of 22:30 |
+| 5.6.1 | G5.1, G5.1(a), G5.1(b), G5.1(c) | G5.1: stays; G5.1(a): stays; G5.1(b): changes; G5.1(c): changes | "Nothing about me without my signature" (18 November); "A power given binds its giver" (18 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "The gate and the pin; a fork, not a race" (26 November); "The giver bears it, not the agent" (27 November); "A filling gives no power" (27 November) | — | 6.3 G5.6(f) and G10.6(a); 6.13; 6.14 C18; P3-22: reading 5 of 20:41, answer 4 of 21:45, reading 8 of 20:55 |
+| 5.6.2 | G5.2 | G5.2: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "Only rules in the hashed text" (17 November); "Who signs an update by default: the known parties" (26 November); "A filling gives no power" (27 November) | — | 6.14 F17/C10 |
+| 5.6.3 | G5.3 | G5.3: stays | "The giver bears it, not the agent" (27 November); "A filling gives no power" (27 November) | — | 6.13 |
+| 5.6.4 | G5.4 | G5.4: changes | "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 Item 28: "shown after"; 6.14 C19, C12/F12 |
+| 5.6.5 | G5.6, G5.6(a), G5.6(b), G5.6(c), G5.6(d), G5.6(e), G5.6(f) | G5.6: stays; G5.6(a): changes; G5.6(b): stays; G5.6(c): stays; G5.6(d): stays; G5.6(e): stays; G5.6(f): two ways, read "stays" by the lead (6.3) | "Who signs an update by default: the known parties" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Only rules in the hashed text" (17 November); "A power given binds its giver" (18 November); "Nothing about me without my signature" (18 November) | M22 | 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a) |
+| 5.6.6 | G5.7, G5.7(a), G5.7(b), G5.7(c) | G5.7: changes; G5.7(a): changes; G5.7(b): changes; G5.7(c): changes | "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Firing an employee" (18 November); "There is no unsigned act: the author is a known party" (27 November); "In force once pinned" (18 November); "A fork is a fork" (27 November) | — | 6.1 Item 1: the pin for a first version; 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a); 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
+| 5.7.1 | G6.1 | G6.1: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November) | — | 6.3 G6.1 and G6.2, with E23 |
+| 5.7.2 | G6.2 | G6.2: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.3 G6.1 and G6.2, with E23; 6.1 row 1; 6.10 row 1; 6.14 F7, C30 |
+| 5.8.1 | G7.1, N2 | G7.1: changes; N2: new | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November) | — | 6.1 Item 4: a keeper's record, and Identity's rule 34; 6.4 row 2 |
+| 5.8.2 | N2 | N2: new | "The place vouches for the chaining only" (26 November) | — | — |
+| 5.8.3 | G7.2, N2 | G7.2: changes; N2: new | "The place vouches for the chaining only" (26 November); "Two keepers named, both needed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | M12 | 6.13; 6.14 C13/F16/S5, C46d; P3-12, his 21:42; P5-20: his 22:36 and 22:39; the lead's 22:45, 3; P7-3; P7-4: the lead's 23:55, 4 |
+| 5.8.4 | G7.2 | G7.2: changes | "The place vouches for the chaining only" (26 November); "The place is a pointer" (17 November); "Two keepers named, both needed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "The gate and the pin; a fork, not a race" (26 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.7 row 1; 6.13; 6.14 C28; P3-13, P3-14: his 21:42, readings 2 and 3 of 20:41; P3-41: reading 18 of 20:55; P5-21, P5-22: the lead's 22:45, 2; P7-5: the lead's 23:55, 2 and 3 |
+| 5.8.5 | G7.4 | G7.4: changes | "Whose anchoring wins" (an earlier exchange, headed by draft 7); "Whose place counts; protect the unknown party, as a principle" (26 November); "Ana's month ends by the clock the agreement names" (27 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.8 row 1 (edit (h)) |
+| 5.8.6 | N9 | N9: new | "A condition in time with no anchor is refused" (26 November); "A specification is a Text act, named by its id" (27 November) | Q26 | 6.7 row 2; 6.14 C21/C22 |
+| 5.9.1 | G8.5 | G8.5: stays | no entry (the brief) | — | — |
+| 5.10.1 | G10.1 | G10.1: stays | no entry (the brief) | — | — |
+| 5.10.2 | G10.2 | G10.2: stays | "For the unknown party there is no update, only the agreement she signed" (27 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A filling gives no power" (27 November) | — | 6.8 row 1; 6.8 row 1 (edit (h)); 6.14 F9/F10/C24, C23 |
+| 5.10.3 | G10.3 | G10.3: stays | "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
+| 5.10.4 | G10.4 | G10.4: stays | no entry (the brief) | — | — |
+| 5.10.5 | G10.5 | G10.5: changes | "A condition in time with no anchor is refused" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
+| 5.10.6 | N5 | N5: new | "A buyer under a replaced version: what version 2 says" (26 November); "Protect the unknown party is an Agreements principle" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Who signs an update by default: the known parties" (26 November); ""Renewed on the terms then current" cannot be built" (27 November); "A filling gives no power" (27 November); "A dead keeper: the agreement is dead; what follows is a new act" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.8 row 1; 14:59, M9 (edit (j); the trace, M10); 6.13; 6.14 F17/C10; P5-23: the lead's answer 1 of 22:30, and 22:45, 4; P7-6: the lead's 23:55, 2 |
+| 5.10.7 | G10.6, G10.6(a) | G10.6: changes; G10.6(a): two ways, read "stays" by the lead (6.3) | "A buyer under a replaced version: what version 2 says" (26 November); "A power given binds its giver" (18 November); "Ana's month ends by the clock the agreement names" (27 November); "A filling gives no power" (27 November) | M22 | 6.3 G5.6(f) and G10.6(a); 6.14 F9/F10/C24; P3-23 to P3-25: readings 7 and 5 of 20:41 |
+| 5.10.8 | G10.7, N6 | G10.7: changes; N6: new | "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November); "A filling gives no power" (27 November) | — | 6.8 row 1; 6.1 row 3; 6.10 row 3 (no clock); 6.14 C27, F9/F10; P5-24: the lead's answer 1 of 22:30 |
+| 5.11.1 | G11.1 | G11.1: stays | no entry (the brief) | — | — |
+| 5.11.2 | G11.2 | G11.2: stays | "Where three rules live" (17 November) | — | — |
+| 5.11.3 | G11.3 | G11.3: two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
+| 5.11.4 | G11.4(e) | G11.4(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.4(e) |
+| 5.11.5 | G11.6(a) | G11.6(a): stays | "Where three rules live" (17 November); "Seeing and being told" (18 November) | — | — |
+| 5.11.6 | G11.6(b) | G11.6(b): two ways, read "stays" by the lead (6.3) | "Seeing and being told" (18 November) | — | 6.3 G11.6(b); 6.1 row 3; 6.10 row 3 (headings) |
+| 5.11.7 | G11.7 | G11.7: stays | "Where three rules live" (17 November) | — | 6.10 row 3 (headings) |
+| 5.11.8 | G11.8 | G11.8: stays | "Where three rules live" (17 November); "The contest" (15 November) | — | 6.14 C12/F12 |
+| 5.11.9 | G14.5(e) | G14.5(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | 6.3 G14.5(e); 6.8 row 2; 6.1 row 2; 6.10 row 2; 6.14 C32; P3-45: reading 19(c) of 20:55 |
+| 5.12.1 | N8 | N8: new | "A fork is a fork" (27 November); "What a race stops" (18 November) | — | — |
+| 5.12.2 | G12.1 | G12.1: changes | "A fork is a fork" (27 November); "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November); "An update the keeper never showed is no update" (27 November) | — | P5-25: his 22:30 |
+| 5.12.3 | G12.2 | G12.2: stays | "No release by a fork or a key" (18 November); "A fork is a fork" (27 November) | — | 6.14 F5; P3-30: reading 9 of 20:55 |
+| 5.12.4 | G12.3 | G12.3: changes | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "Who signs an update by default: the known parties" (26 November); "A fork is a fork" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.2 Item 33: the default signers; 6.6 row 1; 6.1 row 3; 6.10 row 3 (kept, to check); 6.14 C39 |
+| 5.12.5 | G12.4 | G12.4: stays | "The gate and the pin; a fork, not a race" (26 November) | — | — |
+| 5.12.6 | G12.5 | G12.5: stays | "A fork is a fork" (27 November); "A missing act stays unchecked: no door around it" (26 November) | — | — |
+| 5.12.7 | G12.6 | G12.6: stays | no entry (the brief) | — | — |
+| 5.12.8 | G12.7 | G12.7: stays | "Whose place counts; protect the unknown party, as a principle" (26 November) | — | — |
+| 5.12.9 | G12.8 | G12.8: stays | no entry (the brief) | — | 6.4 row 4 |
+| 5.13.1 | G13.1 | G13.1: two ways, read "changes" by the lead (6.3) | "Knots are knots: one reading, "shown after"" (27 November); "The words of Terms are a Text act" (26 November) | — | 6.3 G13.1; 6.14 F6/C26, C25 |
+| 5.13.2 | G13.2 | G13.2: stays | no entry (the brief) | — | — |
+| 5.13.3 | N7 | N7: new | "Knots are knots: one reading, "shown after"" (27 November); "A missing act stays unchecked: no door around it" (26 November); "The place is a pointer" (17 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 Item 28: "shown after"; 6.2 Item 32: the stall; 6.7 row 1; P3-15: the batch of 21:45, on P2's "For P3" 8 and 9; P5-26: the lead's 22:45, 2 |
+| 5.13.4 | G13.3 | G13.3: changes | "Knots are knots: one reading, "shown after"" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.7 row 1 |
+| 5.13.5 | G13.4, G1.4 | G13.4: changes; G1.4: two ways, read "changes" by the lead (6.3) | "A condition in time with no anchor is refused" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November) | — | 6.1 Item 28: "shown after"; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.14 C31/F8 |
+
+5.7.3, written by M5 (a signer's line and the agreement's chain, both knots), is not in draft 26: the lead's reading of 10:07 sent it to this companion (section 6.7, item 3), where section 5 gives it under §5.7.
+
+#### 9.2 The definitions of §3 that changed or are new
+
+Definitions that draft 26 keeps as draft 25 has them ("D25, stays" in the trace, with "place" read as keeper and cross-references moved) are not listed. *Draft 25* is "new" where draft 25 had no such word.
+
+| draft 26, §3 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| Terms (3.1) | Terms | "There is no unsigned act: the author is a known party" (27 November); "Publishing the Terms is the publisher's assent" (27 November) | — | P3-1, his 20:50 |
+| Agreement (3.1) | Agreement | "There is no unsigned act: the author is a known party" (27 November) | — | — |
+| Counter signature (3.1) | Counter signature | "In force once pinned" (18 November) | — | 6.1 item 1; 6.7 row 1 |
+| The words (3.1) | new (N4) | "The words of Terms are a Text act" (26 November) | Q24 | — |
+| The set of acts (3.1) | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21 | 6.5 row 2; 6.6 row 1 |
+| Report, call (3.1) | Report, call | "Where three rules live" (17 November) | — | — |
+| Author (3.2) | Author | "There is no unsigned act: the author is a known party" (27 November); "The signer of a Terms act is an author" (27 November); "Publishing the Terms is the publisher's assent" (27 November); "Publishing the Terms is the publisher's assent" (27 November) | — | 6.5 row 1; 6.13; 6.14 C1/S; 6.15; 6.16 reading 4; P3-3, his 20:50 |
+| Known party (3.2) | new | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "The known parties of a version are the signers it names" (27 November) | — | 6.2 item 33; 6.13; 6.14 C14 |
+| Unknown party (3.2) | new | "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A filling gives no power" (27 November) | M15 | 6.14 F17/C10 (M15's clause gone); 6.16 reading 7; P5-7: the lead's answer 1 of 22:30 |
+| Two classes (3.2, its head paragraph) | new | "A filling gives no power" (27 November), his line of 18:47 | — | 6.14, "For the text, from his words of 18:47"; 6.16, the lead's reading 12 of 20:55; P3-33: reading 12 of 20:55 |
+| Fill, filling (3.2) | Fill, filling | "For the unknown party there is no update, only the agreement she signed" (27 November) | M15 | — |
+| Power (3.2) | Power | "Delegation is a leftover" (18 November); "A filling gives no power" (27 November) | — | 6.13; 6.16 reading 5 |
+| Spot, its sort (3.2) | Spot (its kind) | — | — | 6.13 |
+| Delegation | Delegation: gone | "Delegation is a leftover" (18 November) | — | — |
+| Version (3.3) | Version | "Who signs an update by default: the known parties" (26 November) | — | — |
+| Update (3.3) | Update | "Valid means in force: one gate for an update" (26 November); "The gate and the pin; a fork, not a race" (26 November); "An update the keeper never showed is no update" (27 November) | — | P5-5: his 22:30 |
+| Gate (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November); "An update the keeper never showed is no update" (27 November) | — | 6.2 item 31; P5-3: the lead's 22:45, 1 |
+| Pin (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November); "In force once pinned" (18 November); "A dead keeper: an update every needed signer signs needs no keeper" (27 November); "A dead keeper: two of three cannot leave it" (27 November); "No rule for an exception logic covers" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 item 1; 6.6 row 4; 6.7 row 1; 6.14 C3, F4; 6.16 readings 1 and 2; P3-10, his 21:42; reading 2 of 20:41; P5-4: his 22:39 |
+| Valid, not valid (3.3) | Valid; Answers | "Valid and in force, two words, two jobs" (26 November) | — | — |
+| In force (3.3) | In force | "Valid and in force, two words, two jobs" (26 November) | — | 6.1 item 1 |
+| Fork (3.3) | Fork | "A fork is a fork" (27 November); "Two threads, two owners" (17 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.14 F7 |
+| Late update, late (3.3) | Late update | "Knots are knots: one reading, "shown after"" (27 November); "The gate and the pin; a fork, not a race" (26 November) | M5 | 6.6 row 4; 6.14 F4, C46b; 6.16 reading 3 |
+| Never ended (3.3) | Never ended | "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
+| Apply, no longer applies (3.3) | Apply | "Ana's month ends by the clock the agreement names" (27 November) | — | 6.8 row 1; P5-6: the lead's answer 1 of 22:30 |
+| Resolution, resolving update (3.3) | Resolve | "A fork is a fork" (27 November) | — | 6.13 |
+| Condition (3.3) | Condition | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
+| Triggered; join | no longer terms: gone (their notes in section 11) | "Only rules in the hashed text" (17 November) | — | — |
+| Knot (3.4) | Knot | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.3 G13.1 |
+| Shown after (3.4) | new (N7) | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 item 28 |
+| Keeper (3.4) | `place`, renamed (N2) | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November); "Two keepers named, both needed" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.1 item 4; 6.13 |
+| Keeper's record (3.4) | new | — | — | 6.4 row 2; 6.13 |
+| Placed (3.4) | new | "Two keepers named, both needed" (27 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November) | — | 6.13 |
+| Clock (3.4) | Clock | "Ana's month ends by the clock the agreement names" (27 November) | — | — |
+| Anchoring (3.4) | Anchoring | "Whose place counts; protect the unknown party, as a principle" (26 November) | M20 | 6.3 G1.4 |
+| Lodge, relay, fetch (3.5) | new | "Agreements gets an introduction" (27 November) | — | 6.4 row 3 (uploader) |
+| Client (3.6) | Client | "Signing an agreement relies on its words" (26 November) | — | 6.4 row 4 |
+| Answers (3.6) | Answers | "A fork is a fork" (27 November) | M5 | — |
+| Not shown (3.6) | Not shown | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "The place vouches for the chaining only" (26 November) | — | 6.7 row 1 |
+| Unchecked (3.6) | Unchecked | "A missing act stays unchecked: no door around it" (26 November); "A hand count is the client's choice" (26 November); "A resolve with nothing to resolve: "not shown", with the reason" (26 November), its line "Every refusal states its own reason" | — | 6.14 C29; P7-1: the lead's 23:55, 1 |
+| Invalid (3.6) | Invalid | "A condition in time with no anchor is refused" (26 November) | — | — |
+| Rejected | not an answer word | — | M5 | — |
+
+#### 9.3 The fields of §4 that changed
+
+| draft 26, §4 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| 4.1 the kinds of value | §3, "Each field holds one kind of value" | "The place vouches for the chaining only" (26 November) | — | — |
+| 4.1 the set of acts | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21, F12, F13 | 6.5 row 2; 6.6 row 1 |
+| 4.2 `authors` | §3.1 `authors` | "There is no unsigned act: the author is a known party" (27 November) | — | 6.5 row 1 |
+| 4.2 `body` | §3.1 `body` (the words' bytes) | "The words of Terms are a Text act" (26 November) | Q24, Q25 | 6.5 row 3 |
+| 4.2 `in_force` | §3.1 `in_force` | "Who signs an update by default: the known parties" (26 November) | M11, Q7 | 6.6 row 3 |
+| 4.2 `keeper` | §3.1 `place` | "The place vouches for the chaining only" (26 November); "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | — | 6.16, "After P6": the socket, his |
+| 4.2 `condition` | §3.1 `condition` | "Who signs an update by default: the known parties" (26 November) | — | — |
+| 4.2 `calls` | §3.1 `calls` | "Where three rules live" (17 November) | — | — |
+| 4.2 `envelope`, `envelope_at` | §3.1, the same fields; their rules to Envelopes | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | — |
+| 4.2, 4.3 `resolves`, `continues` | §3.1, §3.2 | "A resolve with nothing to resolve: "not shown", with the reason" (26 November) | — | 6.6 row 1 |
+| 4.3 the report paragraph | §3.2 | "Where three rules live" (17 November) | — | — |
+| 4.4 One fault, one rule | §2's list of the cases of invalid, and §3's "One fault, one rule" | "A condition in time with no anchor is refused" (26 November) for case 8 | — | 6.5 rows 1 and 3 (cases 5 and 2); 6.10 row 3 (its own heading) |
+
+#### 9.4 The tasks of §6
+
+| draft 26, §6 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| the opening | §5's opening, cut | "Only rules in the hashed text" (17 November) | Q26 | 6.7 row 2 |
+| K1 Body | K1, changed | "The words of Terms are a Text act" (26 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November) | Q24, Q25 | — |
+| K2 In force | K2 | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3 |
+| K3 Power | K3 | no entry (the brief) | — | — |
+| K4 Update condition | K4, changed | "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November); "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
+| K5 Spot | K5 | no entry (the brief) | — | 6.8 row 1 |
+| K6 Control | K6, cut | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
+| K7 Kind | K7 | no entry (the brief) | — | — |
+| K8 Data | K8 | no entry (the brief) | — | — |
+| K9 Keepers | new (P6) | "How many keepers are needed: the agreement and its cMIP decide" (27 November); "Keepers: cross verification by default, a socket to lift it" (27 November) | — | 6.16, "After P5" and "After P6": the socket, his since 23:52 to 00:00 (the lead's 23:33 before) |
+| 6.1 Modules | §5.3, its history and "Was" column out (section 11) | "Only rules in the hashed text" (17 November) | — | — |
+
+COUNTED (`trace10.py`): 68 rows in 9.1, one for each numbered rule of draft 26, as M7's closing count has them (§5.1: 5; §5.2: 3; §5.3: 2; §5.4: 5; §5.5: 7; §5.6: 6; §5.7: 2; §5.8: 6; §5.9: 1; §5.10: 8; §5.11: 9; §5.12: 9; §5.13: 5); 38 rows in 9.2; 12 in 9.3; 11 in 9.4 (K9 added by P6); 129 in all. Every heading in the ledger column was matched by the script against the ledger's own bold headings on main.
+<!-- end before P8 -->
 
 ## What draft 26 hands to other texts
 
