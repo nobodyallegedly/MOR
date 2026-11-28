@@ -533,3 +533,108 @@ A subagent that had seen neither the ledger nor the scribe's prompt was given v3
 Fixed, needing no choice: in 7.10, the keys still owed given to `stand-in: words of sale`, the publication's clock named in **Runs on**, and the pointer made while her month is open written by answer 24 (the lead's, to check); in 3.9am, the "we use" agreement's ending condition (the default, answer 1) and who signs it for "we are" (its rule for Agreements), the old "we use" running on with the old "we are" (answer 24), the buyers kept whichever "we are" follows, an answer given to each stand-in named, and renew or exit written under "who signed".
 
 Listed, needing a choice (question 12 below): in 1.9d, the verdict where the parties' pointer meets the ownership agreement's ending condition but `stand-in: stake and transfer` answers that the investor must sign to lower its share. Other stops are the step's setup, in steps it was not given (the investor's holding, 7.10's keepers and ending condition, how an agreement is a party: steps 1.4, 7.1, 7.7, 3.1), or formats v38 does not give (answer 25).
+
+## P8: draft 26's numbers, and his 15:28 to 15:33
+
+*The scribe's session P8, 28 November 2026, one commit on this branch, after draft 26 was rewritten on the model on `claude/draft-26-outline-vbtvu7` (pull request 292). A record of work, not a decision. It rests on his entries "The old collective and new commitments: cMIP business" (15:28–15:30) and "An agreement that acts as a party ends only with those it owes" (15:31–15:33), his words quoted in the ledger, their "Arrived at" lines the MOR lead's, to check; and on the MOR lead's answers 12 (its addition of 15:35), 20 and 27 (`docs/lead/notes/2026-11-28-answers-to-s1.md`). Nothing here is his but what the ledger quotes.*
+
+### In plain words
+
+Draft 26 now numbers its rules, so v38 gives each ledger heading it cites draft 26's rule beside it. Nobody, allegedly, corrected two things this afternoon. An old agreement may still take new commitments, with the signatures of those they are with: the sentence "closes it to every new commitment" is gone wherever it stood. An agreement that acts as a party ends only when every party it is bound to signs: a creditor who is such a party stops a collective's ending, so the cost the scribe had stated is withdrawn. The Agreements box of Core components now opens with the components on draft 26's numbers; draft 24's items stay for the steps v38 did not rewrite, each that the model replaces marked withdrawn.
+
+### Outside the steps
+
+- The head's line and second paragraph: the citation example gives draft 26's number beside draft 24's ("draft 26's 5.5.4").
+- "The model in v38's steps", its bullet on answer 24: "to every new commitment" corrected by his 15:28 to 15:30.
+- Core components, Agreements: a first list of twelve items on draft 26's numbers (answers 20 and 27); draft 24's items kept, each "Agreements rule n" marked "(draft 24)", 29 of them marked *withdrawn on the model*, with the draft 26 rule that replaces it (keeper records, termination, clones, versions; by keyword, INFERRED, to check).
+- Core components, `cmip-collective-control`, and section 3b's first note: their Agreements rule numbers marked as draft 24's.
+
+### The steps changed
+
+COUNTED: 75 steps. "Rule numbers beside its ledger headings" means each “heading” inside an "(Agreements, …)" citation now carries "draft 26's" rule, by the table in the companion's §9.1 (INFERRED).
+
+| Step | What P8 changed |
+|---|---|
+| 1.1 | rule numbers beside its ledger headings |
+| 1.5 | rule numbers beside its ledger headings |
+| 1.5b | rule numbers beside its ledger headings |
+| 1.6 | rule numbers beside its ledger headings |
+| 1.7 | rule numbers beside its ledger headings |
+| 1.7a | rule numbers beside its ledger headings |
+| 1.8 | rule numbers beside its ledger headings |
+| 1.9 | rule numbers beside its ledger headings |
+| 1.9b | rule numbers beside its ledger headings |
+| 1.9c | rule numbers beside its ledger headings |
+| 1.9d | answer 12's addition; rule numbers beside its ledger headings |
+| 1.9e | rule numbers beside its ledger headings |
+| 1.9f | rule numbers beside its ledger headings |
+| 1.9g | rule numbers beside its ledger headings |
+| 1.9h | answer 12's addition; rule numbers beside its ledger headings |
+| 1.9i | rule numbers beside its ledger headings |
+| 1.10 | rule numbers beside its ledger headings |
+| 2.6 | rule numbers beside its ledger headings |
+| 2.7 | rule numbers beside its ledger headings |
+| 3.1 | rule numbers beside its ledger headings |
+| 3.1b | rule numbers beside its ledger headings |
+| 3.1d | rule numbers beside its ledger headings |
+| 3.1e | rule numbers beside its ledger headings |
+| 3.3 | rule numbers beside its ledger headings |
+| 3.4 | rule numbers beside its ledger headings |
+| 3.5 | rule numbers beside its ledger headings |
+| 3.7 | his 15:28 to 15:30: the withdrawn "to every new commitment" corrected; his 15:31 to 15:33 written in; rule numbers beside its ledger headings |
+| 3.7ao | rule numbers beside its ledger headings |
+| 3.7ap | rule numbers beside its ledger headings |
+| 3.7aq | rule numbers beside its ledger headings |
+| 3.7ar | rule numbers beside its ledger headings |
+| 3.7av | rule numbers beside its ledger headings |
+| 3.7az | his 15:28 to 15:30: the withdrawn "to every new commitment" corrected; rule numbers beside its ledger headings; whether the registration is backed marked *open*: the bar it rested on is withdrawn by his 15:28 to 15:30 |
+| 3.7g | rule numbers beside its ledger headings |
+| 3.7h | rule numbers beside its ledger headings |
+| 3.7i | rule numbers beside its ledger headings |
+| 3.7j | rule numbers beside its ledger headings |
+| 3.7m | rule numbers beside its ledger headings |
+| 3.7o | rule numbers beside its ledger headings |
+| 3.7p | rule numbers beside its ledger headings |
+| 3.7q | answer 12's addition; rule numbers beside its ledger headings |
+| 3.7w | rule numbers beside its ledger headings |
+| 3.7x | rule numbers beside its ledger headings |
+| 3.8 | rule numbers beside its ledger headings |
+| 3.9 | his 15:31 to 15:33 written in; rule numbers beside its ledger headings |
+| 3.9a | rule numbers beside its ledger headings |
+| 3.9ab | rule numbers beside its ledger headings |
+| 3.9aj | rule numbers beside its ledger headings |
+| 3.9al | his 15:28 to 15:30: the withdrawn "to every new commitment" corrected; his 15:31 to 15:33 written in; rule numbers beside its ledger headings |
+| 3.9am | rule numbers beside its ledger headings |
+| 3.9b | rule numbers beside its ledger headings |
+| 3.9c | rule numbers beside its ledger headings |
+| 3.9e | rule numbers beside its ledger headings |
+| 3.9f | his 15:31 to 15:33 written in; the withdrawn cost corrected; rule numbers beside its ledger headings |
+| 3.9g | his 15:31 to 15:33 written in; the withdrawn cost corrected |
+| 3.9h | his 15:31 to 15:33 written in; the withdrawn cost corrected |
+| 3.9l | rule numbers beside its ledger headings |
+| 3.9m | rule numbers beside its ledger headings |
+| 3.9o | rule numbers beside its ledger headings |
+| 3.9v | rule numbers beside its ledger headings |
+| 3.9w | rule numbers beside its ledger headings |
+| 3.9x | rule numbers beside its ledger headings |
+| 3.9z | rule numbers beside its ledger headings |
+| 6.3 | rule numbers beside its ledger headings |
+| 7.7 | rule numbers beside its ledger headings |
+| 7.7b | rule numbers beside its ledger headings |
+| 7.7c | rule numbers beside its ledger headings |
+| 7.7d | rule numbers beside its ledger headings |
+| 7.9 | rule numbers beside its ledger headings |
+| 7.10 | his 15:28 to 15:30: the withdrawn "to every new commitment" corrected; rule numbers beside its ledger headings |
+| 9.1 | rule numbers beside its ledger headings |
+| 9.2 | rule numbers beside its ledger headings |
+| 9.3 | rule numbers beside its ledger headings |
+| 9.4 | rule numbers beside its ledger headings |
+| 9.6 | rule numbers beside its ledger headings |
+
+### The checks
+
+Run by the scribe's script, outside the repository, as S2 ran them: every v37 step number still in v38; every ledger heading cited exists on main, word for word; his words against the ledger; nothing forbidden, no line ending in a space; `spec/README.md` and v37 untouched, only the two files changed. Results are in pull request 373's description.
+
+### Questions
+
+For the MOR lead: whether step 3.7az's registration under the closed agreement's area is backed, now that the bar it rested on is withdrawn (marked *open* in the step).
