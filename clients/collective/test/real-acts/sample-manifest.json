@@ -1,0 +1,456 @@
+{
+ "rule": "seed 20261125; 20 Terms and 30 Statements drawn with random.Random(seed).sample from the Agreements acts (draft 25 spec) that some window kept, each list sorted by id first",
+ "source": "_research/windows/<keptBy>/acts/<id>.mor",
+ "acts": [
+  {
+   "id": "0cbc7a6c0be02171200d550ab08384957c06d491067edb1bf2722806705bd99e",
+   "type": "Terms",
+   "signer": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "keptBy": "ampersand",
+   "home": "longhouse-home-1",
+   "feedPosition": 1806,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "a04b34a34d4d9ad8287b608c80a31a7f396861314b0e363ee43cc9d7c36f9bbf",
+   "type": "Terms",
+   "signer": "8c0a433f567edfc7f5303dcf9e8901526941c4666b3c5e27de3c026f6d1e4bbc",
+   "keptBy": "public-creators",
+   "home": "longhouse-home-1",
+   "feedPosition": 2599,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "e7fef3af85dc3ab7c6d4bf6d31bfdb9cae2928731f31e46cd24ab0b7d3c935c0",
+   "type": "Terms",
+   "signer": "75999088b1d200384de591f192649525111cf359444fff7225893ad334c8edb5",
+   "keptBy": "ampersand",
+   "home": "longhouse-home-1",
+   "feedPosition": 4753,
+   "bodyCmip": "04c3185f636b2e40ed0e005fc711bb0e6f1e3ab9a101463605f066aa30b6a78c"
+  },
+  {
+   "id": "7a63e100368d5e5a79fde994896b510c35783eced122e97c60d9a5b07505e3fc",
+   "type": "Terms",
+   "signer": "4189746f81176099adb1219cd3c264ad7bdb012dcf08c64e56e57b0cb968f98a",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 6147,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "1d63199d7483c506c7145b824c3a5b94f48e0fe42cd3d50df33ed52dfbd2a936",
+   "type": "Terms",
+   "signer": "8560636a39d4152d093c7ccdc94b52ccc9d1ef903f8023a0d1b6b1e67c86d720",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 6164,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "fe255cf848871cf25f297a97c2f135b91407e46ef6268598d4f61dfcacf9b028",
+   "type": "Terms",
+   "signer": "4189746f81176099adb1219cd3c264ad7bdb012dcf08c64e56e57b0cb968f98a",
+   "keptBy": "public-prosumers",
+   "home": "turnstile-home",
+   "feedPosition": 3723,
+   "bodyCmip": "04c3185f636b2e40ed0e005fc711bb0e6f1e3ab9a101463605f066aa30b6a78c"
+  },
+  {
+   "id": "ca22d7888a25cb46c63f97f30624572187c8b7dae03514f8f73046b2c958e7e7",
+   "type": "Terms",
+   "signer": "8560636a39d4152d093c7ccdc94b52ccc9d1ef903f8023a0d1b6b1e67c86d720",
+   "keptBy": "public-prosumers",
+   "home": "turnstile-home",
+   "feedPosition": 5116,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "5afc9df3ee44b7cf0875c354603f6ab6224adb583d9424312aef897f9c3baffa",
+   "type": "Terms",
+   "signer": "82f201294a3354cb4f7a2607a2bed92294e70752df6fb1aaef1a0c7973ddb3c1",
+   "keptBy": "public-under-30",
+   "home": "longhouse-home-1",
+   "feedPosition": 1380,
+   "bodyCmip": "ee0fd12101c9f66ffa2213e865f0b109fbe2212953d54f4db1c59ee29456e681"
+  },
+  {
+   "id": "f007bdeb153e40fe346c88ff30ff800c08025587a8c9414e2192d49be8b91e58",
+   "type": "Terms",
+   "signer": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "keptBy": "stall",
+   "home": "longhouse-home-1",
+   "feedPosition": 899,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "4a49aac433e2c84971779355dfbe9cec8e36b38b7441f059810e2ecadf863b74",
+   "type": "Terms",
+   "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+   "keptBy": "dublaw",
+   "home": "longhouse-home-1",
+   "feedPosition": 1510,
+   "bodyCmip": "04c3185f636b2e40ed0e005fc711bb0e6f1e3ab9a101463605f066aa30b6a78c"
+  },
+  {
+   "id": "9af7561744b5f86be82ae92035deccd48434e4d0087c3f919d53a6c7eb757e96",
+   "type": "Terms",
+   "signer": "527c6192e437b305bee406d3406bd72688a4a7de7e15463984a1790fe5e31555",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 6633,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "267913e64c8f61fd53349a61e6543b1118526bcea09ce86f2816ad7c8f50356c",
+   "type": "Terms",
+   "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+   "keptBy": "dublaw",
+   "home": "longhouse-home-1",
+   "feedPosition": 2309,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "9e000f05350035c418eb357c8e21d7549dcf5c95dfe282af6e8d3b1cc3e0bbf6",
+   "type": "Terms",
+   "signer": "f69a763fec9ad8780f24c840ff4bc34c879b05fa01f2ccc9b89caddc6df0db81",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 5706,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "2172e57686beaa1ba368acf413858accf32a6816492a4fc96c10c3b4d4369d5c",
+   "type": "Terms",
+   "signer": "e4ebf706e539fb9c3602b4b036b5346fbbad9bcc62fbeb08f99421e1649f0770",
+   "keptBy": "backlot",
+   "home": "longhouse-home-1",
+   "feedPosition": 3339,
+   "bodyCmip": "29dc728f34a2cbd76987f70079e8ba97e3516f43b0bd58104a21e415d8f900e3"
+  },
+  {
+   "id": "15dc7f1a3c767d471a87c22c5b7cfc106b6258c5884219facf841ec1050503e9",
+   "type": "Terms",
+   "signer": "04dd50220e1d5e9ce460df99a1212f2581278c210bdac65c18dd4b5c341443d9",
+   "keptBy": "public-creators",
+   "home": "longhouse-home-1",
+   "feedPosition": 1347,
+   "bodyCmip": "04c3185f636b2e40ed0e005fc711bb0e6f1e3ab9a101463605f066aa30b6a78c"
+  },
+  {
+   "id": "930cfca2e021162113eeecdf660ea91d0293b4de7ede0e6931a96436af8dbeae",
+   "type": "Terms",
+   "signer": "6e1d5541222672a95d5a9c59a85e1324c26c41c9cef2013687a5b96030c8d74c",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 6457,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "5a9fd25c906d4790a0fd8457de4e26a159297fcc11b0387babf049748f9caca9",
+   "type": "Terms",
+   "signer": "4189746f81176099adb1219cd3c264ad7bdb012dcf08c64e56e57b0cb968f98a",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 6598,
+   "bodyCmip": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528"
+  },
+  {
+   "id": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+   "type": "Terms",
+   "signer": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "keptBy": "dubpay",
+   "home": "longhouse-home-1",
+   "feedPosition": 3408,
+   "bodyCmip": "6924a08fa4dc03703f518f1d0ecbd34327b1926d79b1f804c2c7bf4b65a710c2"
+  },
+  {
+   "id": "795859eefa318092cdcd0278010ee9d5bf4e9daa52fe3af92f332620c402b6ba",
+   "type": "Terms",
+   "signer": "0a3025aea5b95c4b20b19e3bdc77f347e891ef7c4d2cfa1be20283d0eddcfe5f",
+   "keptBy": "clusters",
+   "home": "stall-relay",
+   "feedPosition": 207,
+   "bodyCmip": "e51e8653106125142f6570aa797a5ef56e869ed1d5f17b48cdfa84afc7098dc8"
+  },
+  {
+   "id": "8fef8392c8d62c3f2001498a04f208460941d1cba36f5a8ca0dd56d095e99e08",
+   "type": "Terms",
+   "signer": "527c6192e437b305bee406d3406bd72688a4a7de7e15463984a1790fe5e31555",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 6172,
+   "bodyCmip": "bf4e89e47839b26038a9e9872a7ee373711ed906051a8ff05cfab6364361e6b6"
+  },
+  {
+   "id": "8b8200947fb6597d334b31e987b0cd338ece329e09656ba55c2f4acb22564940",
+   "type": "Statement",
+   "signer": "6763f1b70b9505ccd64384cbf249354277ee487bd3649077d4ba37cc089b3b38",
+   "keptBy": "public-creators",
+   "home": "longhouse-home-1",
+   "feedPosition": 1112,
+   "bodyCmip": null
+  },
+  {
+   "id": "dd4cb2bcca836c5e22d3cb1d9d5dd459edb5f5f5b75027ea74ee0f77977a9c46",
+   "type": "Statement",
+   "signer": "938f514246d30a43bdf043772e9f410c42c8a58ddb2c835569f774daadf10ad9",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 8512,
+   "bodyCmip": null
+  },
+  {
+   "id": "6c324344829b50da6e54b611bebe1cd6371b0510c80a9a276e844317c095fbaa",
+   "type": "Statement",
+   "signer": "762c0b4cf173f058f1c66ff38267de2fd997000fcf9597360b775339daa37f8b",
+   "keptBy": "dubweb",
+   "home": "longhouse-home-1",
+   "feedPosition": 1534,
+   "bodyCmip": null
+  },
+  {
+   "id": "537923dc3a2f405355cd4a524d578a012782d47fa1619371766f6ce106ecacf5",
+   "type": "Statement",
+   "signer": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "keptBy": "stall",
+   "home": "longhouse-home-1",
+   "feedPosition": 2127,
+   "bodyCmip": null
+  },
+  {
+   "id": "775ae8241a9593b284275b217b1c9d4afe2349023d81f0aa5239802783b475eb",
+   "type": "Statement",
+   "signer": "f69a763fec9ad8780f24c840ff4bc34c879b05fa01f2ccc9b89caddc6df0db81",
+   "keptBy": "public-30-49",
+   "home": "stall-relay",
+   "feedPosition": 90,
+   "bodyCmip": null
+  },
+  {
+   "id": "77f04f27455a19df95c4e70b9fd4862a2b2e97583bfe2e77fcf3167926d2c616",
+   "type": "Statement",
+   "signer": "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9",
+   "keptBy": "hop",
+   "home": "longhouse-home-1",
+   "feedPosition": 4266,
+   "bodyCmip": null
+  },
+  {
+   "id": "e5aabb90e5383b2d2cbb534a51f3dc070a412f05dd1c951ca3d294ec561442a1",
+   "type": "Statement",
+   "signer": "1789e02b0ffe0bea4a1e727dd36180d5b77925f7a315d7b4aefb528f73f8e7bd",
+   "keptBy": "ampersand",
+   "home": "longhouse-home-1",
+   "feedPosition": 2710,
+   "bodyCmip": null
+  },
+  {
+   "id": "59a90bca6330911458f1d467d73a57e2deb31b509ecb6f14fdc3fca729d4a5a0",
+   "type": "Statement",
+   "signer": "a64a7bdb369c03b51bd919acf19acf187bce5dcd7433c2ec1c02ab7186e75162",
+   "keptBy": "public-under-30",
+   "home": "longhouse-home-2",
+   "feedPosition": 527,
+   "bodyCmip": null
+  },
+  {
+   "id": "fcc8515c916db297b36deb35a68b7418c4fb2357d8c5e8341e28456566bf69c6",
+   "type": "Statement",
+   "signer": "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9",
+   "keptBy": "steward-and-co",
+   "home": "longhouse-home-1",
+   "feedPosition": 2456,
+   "bodyCmip": null
+  },
+  {
+   "id": "bf1a1ec4a21c61a87ed906674b4f4dfde3c53f7a5858264309fc02b2c226b02c",
+   "type": "Statement",
+   "signer": "c6570c728eb65e3f72b232d3c7d03413246e3bbc1f68673d45b74de5c14305b5",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 7736,
+   "bodyCmip": null
+  },
+  {
+   "id": "6d31566146cf8e3e687c8820d3dded1cd0262ee825b2067996c790016f0c17c3",
+   "type": "Statement",
+   "signer": "98525591c35e7901bae9b079f68b9dfa21f7a83d7c67824040f7a1ed0fdf0a02",
+   "keptBy": "hop",
+   "home": "longhouse-home-1",
+   "feedPosition": 4401,
+   "bodyCmip": null
+  },
+  {
+   "id": "05f6b487ec55f5f6d2586ec646fb6a5a5573c6f54e799535a864f294795aeca5",
+   "type": "Statement",
+   "signer": "50a5f88f1b04c7027d79cc361922bef331f847e6b5f02e5687e34fa11a343178",
+   "keptBy": "public-30-49",
+   "home": "longhouse-home-1",
+   "feedPosition": 3014,
+   "bodyCmip": null
+  },
+  {
+   "id": "fca57ad211637235a3db0eb6b6bd151c571934ab058c0f8dceca81ab85851e0e",
+   "type": "Statement",
+   "signer": "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9",
+   "keptBy": "steward-and-co",
+   "home": "longhouse-home-1",
+   "feedPosition": 1693,
+   "bodyCmip": null
+  },
+  {
+   "id": "fd8ef8a5f48f50d33f550c4279b490b0a9ebc3bb83419a9a46c22a6703b11f03",
+   "type": "Statement",
+   "signer": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "keptBy": "stall",
+   "home": "longhouse-home-1",
+   "feedPosition": 2113,
+   "bodyCmip": null
+  },
+  {
+   "id": "6b6acbb208bc89d078c945aaeb517b0fefe228593efb326bcf4655c50061fefd",
+   "type": "Statement",
+   "signer": "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291",
+   "keptBy": "hop",
+   "home": "longhouse-home-1",
+   "feedPosition": 4320,
+   "bodyCmip": null
+  },
+  {
+   "id": "d2f9476cbed89dde9c1402c02e40113e18a486537b2e7546073a7a1db6f4142b",
+   "type": "Statement",
+   "signer": "d32871af11b3182cc0342b9dff7a982d05e5cc728eb807efa99761a3fead63d4",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 7501,
+   "bodyCmip": null
+  },
+  {
+   "id": "c82f9eb59f7c5f3a8c7349a5925d2223ff1f5f37876d88996248cd5cea8a3faf",
+   "type": "Statement",
+   "signer": "aa204ed8432f4cab07e8f301c2a3a7eda2622d9d6ad466cd8e065e54b9b5245e",
+   "keptBy": "public-creators",
+   "home": "longhouse-home-1",
+   "feedPosition": 2630,
+   "bodyCmip": null
+  },
+  {
+   "id": "f230116609b8609684d958f97f50253c156e8ed1181bd81052638cda033523a1",
+   "type": "Statement",
+   "signer": "1b4b76828c459a762bcc02a568cd345022c75df57ed84e69639fac8f406fb2df",
+   "keptBy": "backlot",
+   "home": "longhouse-home-1",
+   "feedPosition": 4737,
+   "bodyCmip": null
+  },
+  {
+   "id": "8dbe0dfa580ee0d307ff3bc1ae066fca197f9308752d2d79340489452251ae2e",
+   "type": "Statement",
+   "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+   "keptBy": "dublaw",
+   "home": "longhouse-home-1",
+   "feedPosition": 1315,
+   "bodyCmip": null
+  },
+  {
+   "id": "7c4741c1d50b2c3adf0c596179f4f155f625c30e43b23c3f51f7a4888e8404cc",
+   "type": "Statement",
+   "signer": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "keptBy": "public-under-30",
+   "home": "longhouse-home-1",
+   "feedPosition": 2122,
+   "bodyCmip": null
+  },
+  {
+   "id": "967cdd80cf5637919b4c529a64b5503e4351e680822ae593ccbcccb741019482",
+   "type": "Statement",
+   "signer": "b55eee2a1171bcd09c0fe8cef540e60448e083f3544dcd639da6ac9071454c6e",
+   "keptBy": "public-under-30",
+   "home": "turnstile-home",
+   "feedPosition": 3384,
+   "bodyCmip": null
+  },
+  {
+   "id": "28ef323c41402bfd112bf5af3302c296831409e20202f9f4e89f69a0871afe32",
+   "type": "Statement",
+   "signer": "4189746f81176099adb1219cd3c264ad7bdb012dcf08c64e56e57b0cb968f98a",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 6985,
+   "bodyCmip": null
+  },
+  {
+   "id": "e7d089d45a34a8c6c0e9a598cd7b30cda2fdf94341989dda34571be9f699520b",
+   "type": "Statement",
+   "signer": "4a09bf0e9199d0cbb94c934ac88e3eaa05670d2cbf4b321a980c56904d5c06d4",
+   "keptBy": "public-50-plus",
+   "home": "turnstile-home",
+   "feedPosition": 6283,
+   "bodyCmip": null
+  },
+  {
+   "id": "8efe655d5c74cfe472da01f041de2f489da93f16f8a384e40c621b08a10c820f",
+   "type": "Statement",
+   "signer": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "keptBy": "dubpay",
+   "home": "longhouse-home-1",
+   "feedPosition": 1515,
+   "bodyCmip": null
+  },
+  {
+   "id": "31c92d44e227db7046d3f32295f9d8cda67c80f36dea088209068ff5ce0b7d97",
+   "type": "Statement",
+   "signer": "44f66b47e9c69b4457c4238900a320d3b1f4c24750cb69f32234e9dc542e6eea",
+   "keptBy": "counterparty",
+   "home": null,
+   "feedPosition": null,
+   "bodyCmip": null
+  },
+  {
+   "id": "5069d508d1406e29cc2596d7e2e8f51ee72c15a8bd8f14af9fd0f587bd3429fa",
+   "type": "Statement",
+   "signer": "cb5987100f6e712fd7048fc7292f1d217daf9610cead89c53e40ba6da83c049c",
+   "keptBy": "backlot",
+   "home": "longhouse-home-1",
+   "feedPosition": 4745,
+   "bodyCmip": null
+  },
+  {
+   "id": "85350ef27dc56601a87a1bc6ac2a8b6add60133edcb22238d5a30e1967d700ed",
+   "type": "Statement",
+   "signer": "ae97e772834a046df1be5d700feb30cdf13bfd2791a1fd1048ee8dc93013b4a2",
+   "keptBy": "public-prosumers",
+   "home": "turnstile-home",
+   "feedPosition": 3828,
+   "bodyCmip": null
+  },
+  {
+   "id": "8cf3811e3ed74213b8ff3db09e4d921c52f7bdcfe4813e5e58dc376cbfbe6443",
+   "type": "Statement",
+   "signer": "d2500a00b03e5ceff00d13c1ef217e5f1728cb063584fa0145ae96d423658aa0",
+   "keptBy": "hop",
+   "home": "turnstile-home",
+   "feedPosition": 7778,
+   "bodyCmip": null
+  },
+  {
+   "id": "458575bc14e013035cce6583e95a2fc5ad98c325c1aa607eabb25a1c9e119a37",
+   "type": "Statement",
+   "signer": "6e1d5541222672a95d5a9c59a85e1324c26c41c9cef2013687a5b96030c8d74c",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 6196,
+   "bodyCmip": null
+  },
+  {
+   "id": "c08077b442cdac2c62ef1a04693b3d458858e627cf4b6d9a01b1779171fe9ce1",
+   "type": "Statement",
+   "signer": "98c069ee8314b2f76b35ed3bb855fa09f97aee214b9b19d4df9fbc6d85c58cb1",
+   "keptBy": "public-30-49",
+   "home": "turnstile-home",
+   "feedPosition": 5720,
+   "bodyCmip": null
+  }
+ ]
+}

@@ -74,6 +74,9 @@ const nodeShims: Plugin = {
  */
 const PROGRAM_ONLY: Record<string, string | null> = {
   '../collective/src/server.ts': 'src/web/collective-server.ts',
+  // Agreements draft 25: its binding is not in the web release; on the web such an act is said, not read.
+  'src/agreements-25.ts': 'src/web/agreements-25.ts',
+  '../collective/src/agreements-25.ts': null,
   '../collective/src/access.ts': null,
   'src/agents.ts': null,
   'src/claude.ts': null,
