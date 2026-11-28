@@ -1,0 +1,1062 @@
+{
+ "about": "Texts added by hand to inventory-all.json, why the script missed each, what was read, and use counted by hash, by act id and by name in words, kept apart. Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+ "texts": [
+  {
+   "id": "keep-recovery-1",
+   "title": "# Keep recovery, draft 1: MOR for people who will never hold a key",
+   "creator": "a83df2c7699d19b03eb1e7d140a3945e0f6c5fcc7d6e65c8fe686606a8d21f72",
+   "spec_hash": "eb14ebea56cc2bd082b714886c7ec5d01fe0cbacd01321970714f19ce7fb80be",
+   "acts": [
+    "f2b809a270793a5f1d522fcbb594e1253d2935611ecec7125d591ac924378ea9"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "eb14ebea56cc2bd082b714886c7ec5d01fe0cbacd01321970714f19ce7fb80be",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 10,
+    "whole_id": 7,
+    "whole_id_by_way": {
+     "refs": 5,
+     "text": 5
+    },
+    "short_form": 2,
+    "first_8_in_words": 10,
+    "identities": 4,
+    "acts_not_by_creator": 5
+   },
+   "use_by_name": {
+    "pattern": "keep recovery",
+    "acts": 2,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Web",
+   "area_category": "identity safety",
+   "to_settle": true,
+   "prompted": "yes"
+  },
+  {
+   "id": "keep-recovery-2a",
+   "title": "# Keep recovery, draft 2: the right person, decided by people who know them",
+   "creator": "a83df2c7699d19b03eb1e7d140a3945e0f6c5fcc7d6e65c8fe686606a8d21f72",
+   "spec_hash": "db03810342102b260a967d65e941da8b6f9346249ba33bd674cbcaf800370aba",
+   "acts": [
+    "16432468a1012324f9a4d56c00d95abafe926b994e5c25b13e8a31dffc48c7f4"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": "Draft 2, first publication. A second act with the same title (2c6a10b9) says it replaces this one, which overstated how many texts used one-line fields; the bytes differ, so the spec hash differs.",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "db03810342102b260a967d65e941da8b6f9346249ba33bd674cbcaf800370aba",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 2,
+    "whole_id": 2,
+    "whole_id_by_way": {
+     "text": 2
+    },
+    "short_form": 0,
+    "first_8_in_words": 2,
+    "identities": 2,
+    "acts_not_by_creator": 1
+   },
+   "use_by_name": {
+    "pattern": "keep recovery",
+    "acts": 2,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Web",
+   "area_category": "identity safety",
+   "to_settle": true,
+   "prompted": "work"
+  },
+  {
+   "id": "keep-recovery-2b",
+   "title": "# Keep recovery, draft 2: the right person, decided by people who know them",
+   "creator": "a83df2c7699d19b03eb1e7d140a3945e0f6c5fcc7d6e65c8fe686606a8d21f72",
+   "spec_hash": "36112182e09c0844ae439a3059e0dececad1aec77d3958c22354b76120a336cc",
+   "acts": [
+    "2c6a10b99140c512bb5827da31d390e94705b5b6343a71b0aefc1040052a4dcf"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": "Draft 2, published a second time: its first line says it replaces act 16432468…c7f4 (same title, changed words).",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "36112182e09c0844ae439a3059e0dececad1aec77d3958c22354b76120a336cc",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 8,
+    "whole_id": 7,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "refs": 5,
+     "text": 3
+    },
+    "short_form": 0,
+    "first_8_in_words": 6,
+    "identities": 4,
+    "acts_not_by_creator": 4
+   },
+   "use_by_name": {
+    "pattern": "keep recovery",
+    "acts": 2,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Web",
+   "area_category": "identity safety",
+   "to_settle": true,
+   "prompted": "work"
+  },
+  {
+   "id": "postmark-place-3",
+   "title": "# Postmark's place: records and answers, draft 3",
+   "creator": "e6cb06830ac4eae553b7ac4cd027356948ee8eabdfe662dce424283a77c1e81d",
+   "spec_hash": "0d8af220099e5237c382e8d04f5dbfc5d59ccbd8d39879b7003f622b57537b89",
+   "acts": [
+    "e15cb368900c38a755b3190b68f2bc2614a6ca9b22fd774bda201e1d543d73ed"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": "The text says its acts are typed under a stand-in hash, not under its spec hash: the 137 place records under bc39bda6 are its use.",
+   "stand_in": "bc39bda624dc778aaccfbd9f038d456a2fdb7e4cb84fed57e24895206492b7c0",
+   "stand_in_check": "checked: SHA-256 of \"POSTMARK PLACE, draft 3, test value until uploaded\" = bc39bda6…b7c0, the string the text itself gives as its stand-in (and Postmark's day-1-window-3 report: \"Specification draft 3 under a new stand-in hash (bc39bda6…b7c0)\")",
+   "use_by_spec_hash": [
+    {
+     "hash": "0d8af220099e5237c382e8d04f5dbfc5d59ccbd8d39879b7003f622b57537b89",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    },
+    {
+     "hash": "bc39bda624dc778aaccfbd9f038d456a2fdb7e4cb84fed57e24895206492b7c0",
+     "role": "stand-in hash its acts are typed under",
+     "acts": 137,
+     "by_way": {
+      "act spec (field 0)": 137
+     },
+     "identities": 1
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 3,
+    "whole_id": 3,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "text": 2
+    },
+    "short_form": 0,
+    "first_8_in_words": 2,
+    "identities": 2,
+    "acts_not_by_creator": 3
+   },
+   "use_by_name": {
+    "pattern": "postmark'?s place|postmark-place",
+    "acts": 422,
+    "identities": 70,
+    "acts_not_by_creator": 392
+   },
+   "area": "Web",
+   "area_category": "record and time",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "handover-check-1",
+   "title": "# Handover check, draft 1",
+   "creator": "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1",
+   "spec_hash": "5f7cfa2b6646a170affffef4bf71b2b48434443dae45c38d1cdc02c3525c8fd3",
+   "acts": [
+    "3f9351b03a40d432e0b82ec366a9bbff52194f7d018ebea37727606f3a630b05"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "5f7cfa2b6646a170affffef4bf71b2b48434443dae45c38d1cdc02c3525c8fd3",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 14,
+    "whole_id": 10,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "refs": 2,
+     "text": 8
+    },
+    "short_form": 1,
+    "first_8_in_words": 13,
+    "identities": 5,
+    "acts_not_by_creator": 8
+   },
+   "use_by_name": {
+    "pattern": "handover check",
+    "acts": 19,
+    "identities": 6,
+    "acts_not_by_creator": 10
+   },
+   "area": "Web",
+   "area_category": "homes and the way out",
+   "to_settle": false,
+   "prompted": "yes"
+  },
+  {
+   "id": "until-policy-1",
+   "title": "# Until's home: policy, version 1",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "spec_hash": "e4c700d8d145ea764cac103aef899c93dc29315476b4cc730958697b0ab75976",
+   "acts": [
+    "6f779dbe0d4543d30ab8384f8bf85ffde58dcee899aa02314aac777e4a0793a9"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "e4c700d8d145ea764cac103aef899c93dc29315476b4cc730958697b0ab75976",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 2,
+    "whole_id": 2,
+    "whole_id_by_way": {
+     "refs": 1,
+     "text": 2
+    },
+    "short_form": 0,
+    "first_8_in_words": 2,
+    "identities": 2,
+    "acts_not_by_creator": 1
+   },
+   "use_by_name": {
+    "pattern": "until'?s home:? policy",
+    "acts": 2,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Web",
+   "area_category": "homes and the way out",
+   "to_settle": true,
+   "prompted": "no"
+  },
+  {
+   "id": "until-policy-2",
+   "title": "# Until's home: policy, version 2",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "spec_hash": "0f041c379c4d971cf5e328fc3466f153843c2f18521b101f16d074c5be635bda",
+   "acts": [
+    "d6ab83fb2c90a1798b77a87b5bb294ba2fe96799f52a6cbcf47f489d2261480e"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "0f041c379c4d971cf5e328fc3466f153843c2f18521b101f16d074c5be635bda",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 9,
+    "whole_id": 9,
+    "whole_id_by_way": {
+     "refs": 1,
+     "text": 9
+    },
+    "short_form": 0,
+    "first_8_in_words": 9,
+    "identities": 3,
+    "acts_not_by_creator": 5
+   },
+   "use_by_name": {
+    "pattern": "until'?s home:? policy",
+    "acts": 2,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Web",
+   "area_category": "homes and the way out",
+   "to_settle": true,
+   "prompted": "no"
+  },
+  {
+   "id": "room-let-1",
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 1",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "spec_hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+   "acts": [
+    "526f49479f921b0d76dfa1d9aa338cb5baa3de8b66d0e2cff1fbac0858e64491"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 10,
+    "whole_id": 7,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "refs": 3,
+     "text": 4
+    },
+    "short_form": 0,
+    "first_8_in_words": 8,
+    "identities": 5,
+    "acts_not_by_creator": 6
+   },
+   "use_by_name": {
+    "pattern": "room let",
+    "acts": 15,
+    "identities": 4,
+    "acts_not_by_creator": 10
+   },
+   "area": "Agreements",
+   "area_category": "4. Consent and terms for people",
+   "to_settle": false,
+   "prompted": "yes"
+  },
+  {
+   "id": "room-let-2",
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 2",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "spec_hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+   "acts": [
+    "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 7,
+    "whole_id": 5,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "refs": 2,
+     "text": 3
+    },
+    "short_form": 0,
+    "first_8_in_words": 6,
+    "identities": 5,
+    "acts_not_by_creator": 5
+   },
+   "use_by_name": {
+    "pattern": "room let",
+    "acts": 15,
+    "identities": 4,
+    "acts_not_by_creator": 10
+   },
+   "area": "Agreements",
+   "area_category": "4. Consent and terms for people",
+   "to_settle": false,
+   "prompted": "work"
+  },
+  {
+   "id": "room-let-3",
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 3",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "spec_hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+   "acts": [
+    "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 3,
+    "whole_id": 3,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "text": 2
+    },
+    "short_form": 0,
+    "first_8_in_words": 2,
+    "identities": 3,
+    "acts_not_by_creator": 2
+   },
+   "use_by_name": {
+    "pattern": "room let",
+    "acts": 15,
+    "identities": 4,
+    "acts_not_by_creator": 10
+   },
+   "area": "Agreements",
+   "area_category": "4. Consent and terms for people",
+   "to_settle": false,
+   "prompted": "work"
+  },
+  {
+   "id": "invoice-request-1",
+   "title": "# Invoice request form, draft 1 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f335bb4118)",
+   "creator": "6d354b6fd5afa2053efe154cecd9245cb5c8e1f8672ca2a077c5216ab52efa19",
+   "spec_hash": "b13f771cb27614f096bd94fae9d779ca6fd76a1504aa253438cb27c54fd2a74f",
+   "acts": [
+    "72bbce87cf62728e3b8791fe7ab22ddb483d308d83c6fbdfd8df4e4f0979afba"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "b13f771cb27614f096bd94fae9d779ca6fd76a1504aa253438cb27c54fd2a74f",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 12,
+    "whole_id": 11,
+    "whole_id_by_way": {
+     "refs": 3,
+     "text": 11
+    },
+    "short_form": 1,
+    "first_8_in_words": 12,
+    "identities": 7,
+    "acts_not_by_creator": 11
+   },
+   "use_by_name": {
+    "pattern": "invoice request form",
+    "acts": 11,
+    "identities": 6,
+    "acts_not_by_creator": 8
+   },
+   "area": "Money",
+   "area_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "invoice-request-2",
+   "title": "# Invoice request form, draft 2 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f335bb4118)",
+   "creator": "6d354b6fd5afa2053efe154cecd9245cb5c8e1f8672ca2a077c5216ab52efa19",
+   "spec_hash": "76c65a2625d74ac666a43318c9666a525dcdf2b4f4dace46b2ae75d10d2735ec",
+   "acts": [
+    "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "76c65a2625d74ac666a43318c9666a525dcdf2b4f4dace46b2ae75d10d2735ec",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 4,
+    "whole_id": 4,
+    "whole_id_by_way": {
+     "payload key 0": 1,
+     "refs": 1,
+     "text": 3
+    },
+    "short_form": 0,
+    "first_8_in_words": 3,
+    "identities": 4,
+    "acts_not_by_creator": 3
+   },
+   "use_by_name": {
+    "pattern": "invoice request form",
+    "acts": 11,
+    "identities": 6,
+    "acts_not_by_creator": 8
+   },
+   "area": "Money",
+   "area_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "ring-of-names-2",
+   "title": "A ring of names, draft 2: the words of Beatrice's ring, in the shape of Odile Ferrant's word in advance (act 2ea9aa1d, Terms 66072149), so that one tool (Sanne Verhoeven's standing.mjs) and one habit of reading serve both. It replaces draft 1 (Terms 789552185d612f0f45c98577013f932d4f4032457e0bbf6ff69a8a87bbabb78f). It is not a sale. Nobody is paid under it.",
+   "creator": "611acc3e09182b3c29a758547ce45512950a57af85a3e1a13521a57e33954c9b",
+   "spec_hash": "3e809f2a1f7dfb78217470067c6f341870c1d4ac0cc91939739b6f29949a6f30",
+   "acts": [
+    "c412a37d7d7c3cafa88001caad09af3b21bd7b03546d8aa0b4228b2a21136ea7",
+    "9b660a341a83b39e867250da3a17a890db972b6f59b50dce9de5089d438920ea"
+   ],
+   "terms": "9b660a341a83b39e867250da3a17a890db972b6f59b50dce9de5089d438920ea",
+   "words_text_act": "c412a37d7d7c3cafa88001caad09af3b21bd7b03546d8aa0b4228b2a21136ea7",
+   "text_in_copy": true,
+   "why_missed": "its words are Terms (Agreements draft 25, type 0), not a text act under a spec: the Terms name a fingerprint of the words (body key 4), never a spec hash, so the script's rule never sees them",
+   "read": "Terms 9b660a34…20ea, signed by Beatrice (611acc3e…4c9b): body.words = cc29e10f…, which is the MOR work hash (tagged \"MOR/work\") of the text act c412a37d…6ea7 (\"A ring of names, draft 2\"), computed here; body.cmip = 61bcdb5b…4528 (the plain-words reading); previous (key 5) = c412a37d…; it replaces draft 1 (Terms 789552185d61…, words in act 34d68932…), which is not added here.",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "3e809f2a1f7dfb78217470067c6f341870c1d4ac0cc91939739b6f29949a6f30",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 20,
+    "whole_id": 18,
+    "whole_id_by_way": {
+     "Agreements type 1 key 1": 4,
+     "Agreements type 1 key 6": 1,
+     "payload key 0": 2,
+     "refs": 8,
+     "text": 7
+    },
+    "short_form": 3,
+    "first_8_in_words": 13,
+    "identities": 10,
+    "acts_not_by_creator": 15
+   },
+   "use_by_name": {
+    "pattern": "ring of names",
+    "acts": 10,
+    "identities": 4,
+    "acts_not_by_creator": 7
+   },
+   "area": "Web",
+   "area_category": "identity safety",
+   "to_settle": true,
+   "prompted": "work"
+  },
+  {
+   "id": "word-in-advance-1",
+   "title": "Word in advance 1, of Odile Ferrant: what to believe about this identity if it is taken, lost or silent.",
+   "creator": "d79c1ba74980bd25ba90b84ed598933cb6b934267b4a9583e4e9327db79970ff",
+   "spec_hash": "64415bc6416dbdad73c18217f30f6268055d3db48420149b16dfca78f4ef5178",
+   "acts": [
+    "2ea9aa1d5719e71848cc1171d01bd9cafe796798dcbe76ac2b8b258e45d5675e",
+    "660721491929de75ae32ff8d2898bafcf1a4f49148ae059250fd4d6a1db7f245"
+   ],
+   "terms": "660721491929de75ae32ff8d2898bafcf1a4f49148ae059250fd4d6a1db7f245",
+   "words_text_act": "2ea9aa1d5719e71848cc1171d01bd9cafe796798dcbe76ac2b8b258e45d5675e",
+   "text_in_copy": true,
+   "why_missed": "its words are Terms (Agreements draft 25, type 0), not a text act under a spec: the Terms name a fingerprint of the words, never a spec hash",
+   "read": "Terms 66072149…f245, signed by Odile Ferrant (d79c1ba7…70ff), parties Odile and three witnesses: body.words = f2c8b30d…, which is the MOR work hash of the text act 2ea9aa1d…675e (\"Word in advance 1, of Odile Ferrant\"), computed here; body.cmip = 61bcdb5b…4528 (the plain-words reading).",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "64415bc6416dbdad73c18217f30f6268055d3db48420149b16dfca78f4ef5178",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 43,
+    "whole_id": 32,
+    "whole_id_by_way": {
+     "Agreements type 1 key 0": 8,
+     "Agreements type 1 key 1": 4,
+     "Agreements type 1 key 6": 1,
+     "Terms socket key 0": 1,
+     "Terms socket key 1": 1,
+     "payload key 0": 2,
+     "payload key 5": 1,
+     "refs": 11,
+     "text": 11
+    },
+    "short_form": 17,
+    "first_8_in_words": 31,
+    "identities": 11,
+    "acts_not_by_creator": 35
+   },
+   "use_by_name": {
+    "pattern": "word in advance",
+    "acts": 42,
+    "identities": 8,
+    "acts_not_by_creator": 35
+   },
+   "area": "Web",
+   "area_category": "identity safety",
+   "to_settle": true,
+   "prompted": "no"
+  },
+  {
+   "id": "anchoring-8",
+   "title": "Anchoring cMIP, draft 8 (Longhouse runs it)",
+   "creator": null,
+   "spec_hash": null,
+   "acts": [],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": false,
+   "why_missed": "its text is not a public text act in the copy: none of Longhouse's (b820fe4b…10f1) public text acts is the cMIP; they only apply it (\"in the anchoring cMIP draft 8's form\") and never give its spec hash",
+   "read": "Searched every public text act signed by b820fe4b: anchors 1 to 12, their leaves and blinds, offers, answers, the Handover check; none is the anchoring cMIP. _research/cmips-indispensable.md lists \"Anchoring, draft 8 | genesis repository; Longhouse runs it\". Not in the copy: no spec hash, no text. Its use is counted by name only.",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [],
+   "use_by_act_id": null,
+   "use_by_name": {
+    "pattern": "anchoring cmip[^\\n]{0,30}draft 8|anchoring, draft 8|anchoring cmip'?s (own )?form",
+    "acts": 81,
+    "identities": 9,
+    "acts_not_by_creator": 81
+   },
+   "area": "Web",
+   "area_category": "record and time",
+   "to_settle": true,
+   "prompted": "no"
+  },
+  {
+   "id": "report-block-4",
+   "title": "The report block, proposal 4",
+   "creator": null,
+   "spec_hash": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854",
+   "acts": [],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": false,
+   "why_missed": "named as a spec (81 acts are signed under it) but its text is not a text act in the copy: it is a hosts' proposal file in the repository",
+   "read": "Identified from the hosts' 01-where-to-read.md (every window's from-the-hosts/): \"The report block, proposal 4 (a proposal, not yet a rule): docs/lead/proposals/report-block-4.md … spec hash 7b65c60f…7854. Proposals 2 and 3 are replaced.\" Text not in the copy.",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854",
+     "role": "spec hash, as named",
+     "acts": 81,
+     "by_way": {
+      "act spec (field 0)": 81
+     },
+     "identities": 5
+    }
+   ],
+   "use_by_act_id": null,
+   "use_by_name": {
+    "pattern": "report block",
+    "acts": 73,
+    "identities": 14,
+    "acts_not_by_creator": 73
+   },
+   "area": "Money",
+   "area_category": "1. Splits and payout services",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "postmark-place-4",
+   "title": "Postmark's place, specification draft 4 (place 0.4.0; stand-in hash)",
+   "creator": "e6cb06830ac4eae553b7ac4cd027356948ee8eabdfe662dce424283a77c1e81d",
+   "spec_hash": "53b1b4bec1782cebf8c90d89c3a9b6008e13767e2a996dd6ce94c8bf7c96da77",
+   "acts": [],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": false,
+   "why_missed": "named as a spec (1,699 acts under it) but no text in the copy: a stand-in hash, not computed from creator, kind and text",
+   "read": "Postmark's day-2-window-1 report: \"Specification draft 4 (stand-in 53b1b4be…da77)\"; day-5-window-3: drafts 4 and 5 \"Not yet published under a creator, so still stand-ins\"; the followers' day-5-window-3-final report: \"Postmark's place, draft 4 | 53b1b4be…\". Draft 5 (3c58eeaa…, handover and takeover) is named in the same report; no act in the copy is signed under it.",
+   "stand_in": "53b1b4bec1782cebf8c90d89c3a9b6008e13767e2a996dd6ce94c8bf7c96da77",
+   "stand_in_check": "checked: SHA-256 of \"POSTMARK PLACE, draft 4, test value until uploaded\" = 53b1b4be…da77",
+   "use_by_spec_hash": [
+    {
+     "hash": "53b1b4bec1782cebf8c90d89c3a9b6008e13767e2a996dd6ce94c8bf7c96da77",
+     "role": "stand-in hash",
+     "acts": 1703,
+     "by_way": {
+      "act spec (field 0)": 1699,
+      "text": 4
+     },
+     "identities": 5
+    }
+   ],
+   "use_by_act_id": null,
+   "use_by_name": {
+    "pattern": "postmark'?s place|postmark-place",
+    "acts": 423,
+    "identities": 70,
+    "acts_not_by_creator": 392
+   },
+   "area": "Web",
+   "area_category": "record and time",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "postmark-place-1",
+   "title": "Postmark's place, records spec draft 1 (stand-in hash)",
+   "creator": "e6cb06830ac4eae553b7ac4cd027356948ee8eabdfe662dce424283a77c1e81d",
+   "spec_hash": "e8891459b8b33b05b93beb800022d7ced6e2ca0d3a7a87149a5c922bc8190efc",
+   "acts": [],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": false,
+   "why_missed": "named as a spec (108 records under it) but no text in the copy: a stand-in hash",
+   "read": "Draft 3's text says \"The payloads are as in drafts 1 and 2\"; the stand-in of draft 2 (SHA-256 of the same string with \"draft 2\") is named by no act in the copy.",
+   "stand_in": "e8891459b8b33b05b93beb800022d7ced6e2ca0d3a7a87149a5c922bc8190efc",
+   "stand_in_check": "checked, no longer only inferred: SHA-256 of \"POSTMARK PLACE, draft 1, test value until uploaded\" = e8891459…0efc, the same pattern as drafts 3, 4 and 5; all 108 acts under it are records of the place identity b3d7eee6…0919 in postmark-place's record. No report in the copy names e8891459.",
+   "use_by_spec_hash": [
+    {
+     "hash": "e8891459b8b33b05b93beb800022d7ced6e2ca0d3a7a87149a5c922bc8190efc",
+     "role": "stand-in hash",
+     "acts": 108,
+     "by_way": {
+      "act spec (field 0)": 108
+     },
+     "identities": 1
+    }
+   ],
+   "use_by_act_id": null,
+   "use_by_name": {
+    "pattern": "postmark'?s place|postmark-place",
+    "acts": 423,
+    "identities": 70,
+    "acts_not_by_creator": 392
+   },
+   "area": "Web",
+   "area_category": "record and time",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "stall-k2-in-force-on-assents",
+   "title": "Stall cMIP: in force on the sellers' assents (task K2, in_force), draft 1. Terms that name this cMIP in in_force are in force when there is an assent to them in the name of every party they name as a signer. A party named by role is not counted: a buyer's assent never decides whether an offer is in force, it only fills a spot. No parameters. Its fingerprint, as Stall names it in Terms: the id of the act that publishes this text. Free to use, copy and replace. Stall (ddafffcd…a66e).",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "spec_hash": "a188d3116d1657ba95c29bdebc9e234d765cf2568dcc6abcd2c0f646d5debba6",
+   "acts": [
+    "de8d5d297b3d57f0c97b3182cf82ccc2aee6eee6cb14632561de8fb7aa8e7f1b"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "named by act id only: acts name it by its act id, never by its spec hash, and its first line does not begin \"# cMIP\" or \"# Module\"; added by hand in version 2 because DubLaw's slice check (25 November 2026) asks for it in Agreements",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "a188d3116d1657ba95c29bdebc9e234d765cf2568dcc6abcd2c0f646d5debba6",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 22,
+    "whole_id": 19,
+    "whole_id_by_way": {
+     "Terms socket key 5": 15,
+     "Terms socket key 6": 15,
+     "refs": 1,
+     "text": 3
+    },
+    "short_form": 2,
+    "first_8_in_words": 7,
+    "identities": 3,
+    "acts_not_by_creator": 7
+   },
+   "use_by_name": {
+    "pattern": "in force on the sellers'? assents",
+    "acts": 0,
+    "identities": 0,
+    "acts_not_by_creator": 0
+   },
+   "area": "Agreements",
+   "area_category": "1. When Terms are in force, and who signs",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "stall-k5-buyers-spot",
+   "title": "Stall cMIP: the buyer's spot (task K5, a role of kind done), draft 1. A role naming this cMIP as its spot is filled, once per payment, by a signer (1) whose assent names the version of the Terms they buy under, and (2) whose payment names that same version, is of at least the price those Terms' words state, and is made to those Terms' receiver; (3) once the receiving side has confirmed that payment (G11.7). Who confirms: the receiving side, by its report; on the buyer's word alone, the spot is not filled. What the filling earns: what the Terms' words say the price buys, and nothing more. A buyer's filling stays theirs whatever later versions of the Terms say (G10.6). No parameters. Its fingerprint, as Stall names it in Terms: the id of the act that publishes this text. Free to use, copy and replace. Stall (ddafffcd…a66e).",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "spec_hash": "6d68a808d970788f7a4fd7bb85470688bc8b5f60ebdf51805626972f2f6c4bd9",
+   "acts": [
+    "0b9eee89f9f7d7968fd7141d142018007afe4d6d32fe316e21c5408aafb59a65"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "named by act id only: acts name it by its act id, never by its spec hash, and its first line does not begin \"# cMIP\" or \"# Module\"; added by hand in version 2 because DubLaw's slice check (25 November 2026) asks for it in Agreements",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "6d68a808d970788f7a4fd7bb85470688bc8b5f60ebdf51805626972f2f6c4bd9",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 23,
+    "whole_id": 22,
+    "whole_id_by_way": {
+     "Terms socket key 2": 15,
+     "Terms socket key 5": 15,
+     "refs": 1,
+     "text": 6
+    },
+    "short_form": 2,
+    "first_8_in_words": 8,
+    "identities": 2,
+    "acts_not_by_creator": 9
+   },
+   "use_by_name": {
+    "pattern": "stall[^\\n]{0,20}buyer'?s spot",
+    "acts": 1,
+    "identities": 1,
+    "acts_not_by_creator": 1
+   },
+   "area": "Agreements",
+   "area_category": "1. When Terms are in force, and who signs",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "stall-k4-change-or-leave",
+   "title": "Stall cMIP: the seller may change the offer, or leave its service alone (task K4, condition), draft 1. Terms that name this cMIP in condition name one seller and one service among their signers, as their words say. A new version is valid, and replaces the one it names, (a) when it carries the assent of every party named as a signer, and of no buyer; or (b) when it carries the seller's assent alone, and its only changes are to take the service out: the service's party and line removed, the receiver made the seller, the control socket emptied. Under (a) and (b) alike, nothing a buyer has already earned is changed (G10.6): a new version changes the price, the words or the receiver only for buyers who have not yet paid, and a version that would take from an earned filling is not valid. No parameters. Its fingerprint, as Stall names it in Terms: the id of the act that publishes this text. Free to use, copy and replace. Stall (ddafffcd…a66e).",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "spec_hash": "687572c7f7f993b862aa1027022daaeb004728f5c62acf952d86ab1ef970a0d3",
+   "acts": [
+    "6dd4fff634dfb4432a205da55eefb823ce41cfa9ad87abba4999be56938d3d15"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "named by act id only: acts name it by its act id, never by its spec hash, and its first line does not begin \"# cMIP\" or \"# Module\"; added by hand in version 2 because DubLaw's slice check (25 November 2026) asks for it in Agreements",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "687572c7f7f993b862aa1027022daaeb004728f5c62acf952d86ab1ef970a0d3",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 12,
+    "whole_id": 8,
+    "whole_id_by_way": {
+     "Terms socket key 13": 6,
+     "Terms socket key 5": 6,
+     "text": 2
+    },
+    "short_form": 0,
+    "first_8_in_words": 6,
+    "identities": 2,
+    "acts_not_by_creator": 2
+   },
+   "use_by_name": {
+    "pattern": "leave its service alone",
+    "acts": 0,
+    "identities": 0,
+    "acts_not_by_creator": 0
+   },
+   "area": "Agreements",
+   "area_category": "2. Ownership and collectives",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "stall-k4-future-buyers",
+   "title": "Stall cMIP: the seller may change an offer for future buyers (task K4, condition), draft 1. A new version of Terms that name this cMIP in condition is valid, and replaces the one it names, when it carries the assent of every party the version it replaces names as a signer (the sellers), and of no buyer; and where it changes nothing a buyer has already earned. What a buyer earned under an earlier version (G10.6) is kept: a new version changes the price, the words or the receiver only for buyers who have not yet paid. Any version that would take from an earned filling is not valid under this cMIP. No parameters. Its fingerprint, as Stall names it in Terms: the id of the act that publishes this text. Free to use, copy and replace. Stall (ddafffcd…a66e).",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "spec_hash": "1d13e1e9ff54620f7af4f7b3e6b5ead502cdf15f362e6d975dc9d495d53bb808",
+   "acts": [
+    "3f2a69dee8f2e09b27a5b78bd20bb237be29e37e18d020939d0be7421f3dc2eb"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "named by act id only: acts name it by its act id, never by its spec hash, and its first line does not begin \"# cMIP\" or \"# Module\"; added by hand in version 2 because DubLaw's slice check (25 November 2026) asks for it in Agreements",
+   "read": null,
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "1d13e1e9ff54620f7af4f7b3e6b5ead502cdf15f362e6d975dc9d495d53bb808",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 3,
+    "whole_id": 3,
+    "whole_id_by_way": {
+     "text": 3
+    },
+    "short_form": 0,
+    "first_8_in_words": 3,
+    "identities": 2,
+    "acts_not_by_creator": 2
+   },
+   "use_by_name": {
+    "pattern": "for future buyers",
+    "acts": 1,
+    "identities": 1,
+    "acts_not_by_creator": 0
+   },
+   "area": "Agreements",
+   "area_category": "2. Ownership and collectives",
+   "to_settle": false,
+   "prompted": "no"
+  },
+  {
+   "id": "counterparty-plain-words-body-1",
+   "title": "Counterparty plain-words body, version 1. The words of Terms that name this cMIP in body (task K1) are read as written, by people, in English. They give no parts for machines: no shares, no delegation. Free to use, copy and replace. Its fingerprint, as Counterparty names it in body until a shared plain-words body cMIP exists: SHA-256 of the two sentences before this one and the third, exactly: 61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528.",
+   "creator": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+   "spec_hash": "80658862d4ae21b667b43fd4469d6920508458ec6fa322610c83e54ee593e51b",
+   "acts": [
+    "ee0fd12101c9f66ffa2213e865f0b109fbe2212953d54f4db1c59ee29456e681"
+   ],
+   "terms": null,
+   "words_text_act": null,
+   "text_in_copy": true,
+   "why_missed": "named by act id only: acts name it by its act id, never by its spec hash, and its first line does not begin \"# cMIP\" or \"# Module\"; added by hand in version 2 because DubLaw's slice check (25 November 2026) asks for it in Agreements",
+   "read": "DubLaw lists this text twice, \"in two copies (61bcdb5b… and ee0fd121…)\". The copy holds one text act, ee0fd121…e681; 61bcdb5b…4528 is no act in the copy: it is the fingerprint DubLaw's listing gives as \"sha256 of its opening sentences\", which Terms name in their body socket. So one record here carries both keys: DubLaw's six entries are five texts.",
+   "stand_in": null,
+   "stand_in_check": null,
+   "use_by_spec_hash": [
+    {
+     "hash": "80658862d4ae21b667b43fd4469d6920508458ec6fa322610c83e54ee593e51b",
+     "role": "spec hash (kind 0) computed from creator, kind and text",
+     "acts": 0,
+     "by_way": {},
+     "identities": 0
+    }
+   ],
+   "use_by_act_id": {
+    "acts": 23,
+    "whole_id": 21,
+    "whole_id_by_way": {
+     "Terms socket key 4": 20,
+     "text": 1
+    },
+    "short_form": 1,
+    "first_8_in_words": 3,
+    "identities": 15,
+    "acts_not_by_creator": 21
+   },
+   "use_by_name": {
+    "pattern": "plain-words body",
+    "acts": 18,
+    "identities": 12,
+    "acts_not_by_creator": 14
+   },
+   "area": "Agreements",
+   "area_category": "4. Consent and terms for people",
+   "to_settle": false,
+   "prompted": "no"
+  }
+ ]
+}
