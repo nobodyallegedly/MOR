@@ -163,6 +163,8 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 
 **No dissolving with open obligations to unknown parties** (28 November, 08:57; after "The ending condition"). He: "Important, an agreement cannot be dissolved if it has open obligations towards unknown parties"
 - *Arrived at (to check):* while any unknown party's filling still binds the known parties (her version's words say it still applies, by its own clock), the agreement is not dissolved, whatever its ending condition says; it is dissolved once no such obligation is open. A new version may still follow, and her filling stays bound by her version ("Protect the unknown party"). The MOR lead's reading, to check: where a verifier cannot tell whether an obligation is open (the words' cMIP not held, or a filling's record not held), the dissolution is not shown, with that reason, and never a yes.
+- Then (08:58), he: "The known parties are protected by their signatures, or the signature scheme they agreed to."
+- *Arrived at (to check):* the two classes are protected in two ways. An unknown party is protected by the principle: bound by her version, no later version reaching her. A known party is protected by their own signature, or by the scheme of signatures they agreed to (the ending condition, the powers, the keepers' socket): nothing binds them that they, or that scheme, did not sign. Draft 26 says so beside **Two classes**.
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
