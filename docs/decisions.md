@@ -207,6 +207,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 **Dubsar for cMIP frameworks** (28 November, 14:05). He: "remember that Dubsar can be leveraged when exploring cMIP frameworks"
 - *Arrived at (to check):* when the work needs a cMIP framework explored (the suite's stand-ins, DubLaw's launch set, collective structures), the Dubsar Suite's windows are asked, through its lead, rather than the MOR windows inventing them.
 
+**"Not to be used bare", bigger in the prompts** (28 November, 14:06). He: "It feels like the “not to be used bare” label needs to be bigger" The MOR lead offered it bigger in the words (the MIR's first line) and in the bytes (every answer on an empty socket labelled "by default"), leaning both. He: "In the prompts"
+- *Arrived at (to check):* every prompt that touches Agreements carries his warning right after the wish, quoted, before any task: "This version of agreements is not to be used bare. Big warning needs to be placed on it." with "If agreements it’s always a cMIP". The MOR lead's two other ways (the MIR's first line, the "by default" label in answers) are not decided.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
